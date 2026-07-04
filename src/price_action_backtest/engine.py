@@ -32,12 +32,11 @@ def run_backtest(
     data = frame.copy().reset_index(drop=True)
     close = pd.to_numeric(data["close"], errors="raise")
 
-    clean_signal = pd.Series(signal, index=data.index, dtype="float64").fillna(0).clip(0, 1)
-    position = clean_signal.shift(1).fillna(0)
-
     asset_return = close.pct_change().fillna(0)
-    position_change = clean_signal.diff().fillna(clean_signal)
-    turnover = position_change.abs()
+
+    clean_signal = signal.astype(int).clip(lower=0, upper=1).reset_index(drop=True)
+    position = clean_signal.shift(1).fillna(0).astype(int)
+    turnover = position.diff().abs().fillna(position.abs())
     cost_rate = (float(fee_bps) + float(slippage_bps)) / 10_000
     cost = turnover * cost_rate
     strategy_return = (position * asset_return) - cost
@@ -50,8 +49,8 @@ def run_backtest(
     else:
         equity = data[["close"]].copy()
     equity["asset_return"] = asset_return
-    equity["signal"] = clean_signal.astype(int)
-    equity["position"] = position.astype(int)
+    equity["signal"] = clean_signal
+    equity["position"] = position
     equity["turnover"] = turnover
     equity["cost"] = cost
     equity["strategy_return"] = strategy_return
@@ -62,6 +61,7 @@ def run_backtest(
     trade_mask = turnover > 0
     trade_columns = ["date", "close"] if "date" in equity.columns else ["close"]
     trades = equity.loc[trade_mask, trade_columns].copy()
+    position_change = position.diff().fillna(position)
     trades["position_change"] = position_change.loc[trade_mask]
     trades["turnover"] = turnover.loc[trade_mask]
     trades["cost"] = cost.loc[trade_mask]

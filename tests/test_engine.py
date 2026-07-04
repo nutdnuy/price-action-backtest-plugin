@@ -27,10 +27,30 @@ def test_one_bar_shift_avoids_same_bar_lookahead():
 
 
 def test_costs_charged_on_position_changes():
-    frame = make_frame([100, 100, 100])
-    signal = pd.Series([0, 1, 0])
+    frame = make_frame([100, 100, 100, 100])
+    signal = pd.Series([0, 1, 0, 0])
 
     result = run_backtest(frame, signal, fee_bps=10, slippage_bps=5)
 
     assert result.metrics["total_cost"] == pytest.approx(0.003)
     assert result.metrics["trade_count"] == 2
+
+
+def test_signal_is_coerced_to_clipped_integer_values():
+    frame = make_frame([100, 100, 100, 100])
+    signal = pd.Series([0.2, 1.9, 2.0, -1.0])
+
+    result = run_backtest(frame, signal, fee_bps=0, slippage_bps=0)
+
+    assert result.equity["signal"].tolist() == [0, 1, 1, 0]
+
+
+def test_turnover_and_trades_occur_on_shifted_position_bar():
+    frame = make_frame([100, 100, 100])
+    signal = pd.Series([0, 1, 0])
+
+    result = run_backtest(frame, signal, fee_bps=0, slippage_bps=0)
+
+    assert result.equity["position"].tolist() == [0, 0, 1]
+    assert result.equity["turnover"].tolist() == [0, 0, 1]
+    assert result.trades["date"].tolist() == [pd.Timestamp("2024-01-03")]
