@@ -1,19 +1,35 @@
 #!/usr/bin/env python3
 import argparse
+import datetime as dt
 import importlib.util
 import json
 import re
 import sys
-from datetime import datetime, timezone
 from pathlib import Path
-
 
 RUNTIME_DEPENDENCIES = ("pandas", "numpy", "plotly")
 CROSSOVER_STRATEGIES = {"sma_cross", "ema_cross"}
+UTC = getattr(dt, "UTC", vars(dt.timezone)["utc"])
 
 
 def emit_json(payload):
     print(json.dumps(payload, indent=2, sort_keys=True))
+
+
+def emit_error(error, field=None):
+    payload = {
+        "ok": False,
+        "error": error,
+    }
+    if field is not None:
+        payload["field"] = field
+    emit_json(payload)
+
+
+class JsonArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        emit_error(message)
+        raise SystemExit(2)
 
 
 def has_module(name):
@@ -51,18 +67,17 @@ def make_run_dir(output_root, name, created_at):
 def command_init_run(args):
     data_path = Path(args.data_path)
     if not data_path.exists():
-        print(f"data path does not exist: {args.data_path}", file=sys.stderr)
+        emit_error(f"data path does not exist: {args.data_path}", field="data_path")
         return 1
 
     if args.strategy in CROSSOVER_STRATEGIES and args.fast_window >= args.slow_window:
-        print(
-            "fast_window must be less than slow_window for "
-            f"{args.strategy}",
-            file=sys.stderr,
+        emit_error(
+            f"fast_window must be less than slow_window for {args.strategy}",
+            field="fast_window",
         )
         return 1
 
-    created_at = datetime.now(timezone.utc)
+    created_at = dt.datetime.now(UTC)
     created_at_utc = created_at.isoformat().replace("+00:00", "Z")
     output_root = Path(args.output_root)
     output_root.mkdir(parents=True, exist_ok=True)
@@ -96,10 +111,14 @@ def command_init_run(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(
+    parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
     )
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    subparsers = parser.add_subparsers(
+        dest="command",
+        parser_class=JsonArgumentParser,
+        required=True,
+    )
 
     setup = subparsers.add_parser("setup-check", help="Check runtime setup.")
     setup.add_argument(

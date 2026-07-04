@@ -3,7 +3,6 @@ import subprocess
 import sys
 from pathlib import Path
 
-
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "price_action_backtest.py"
 SAMPLE_DATA = ROOT / "templates" / "sample-ohlcv.csv"
@@ -67,3 +66,61 @@ def test_init_run_creates_run_folder_and_config(tmp_path):
     assert config["strategy"] == "sma_cross"
     assert config["fast_window"] == 5
     assert config["slow_window"] == 20
+
+
+def test_init_run_missing_data_path_returns_json_error(tmp_path):
+    missing_path = tmp_path / "missing.csv"
+    result = run_cli(
+        "init-run",
+        "--name",
+        "Missing data demo",
+        "--data-path",
+        str(missing_path),
+        "--strategy",
+        "sma_cross",
+        "--fast-window",
+        "5",
+        "--slow-window",
+        "20",
+        "--output-root",
+        str(tmp_path / "outputs"),
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["field"] == "data_path"
+    assert "does not exist" in payload["error"]
+
+
+def test_init_run_invalid_crossover_windows_returns_json_error(tmp_path):
+    result = run_cli(
+        "init-run",
+        "--name",
+        "Bad windows",
+        "--data-path",
+        str(SAMPLE_DATA),
+        "--strategy",
+        "sma_cross",
+        "--fast-window",
+        "20",
+        "--slow-window",
+        "5",
+        "--output-root",
+        str(tmp_path),
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["field"] == "fast_window"
+    assert "fast_window" in payload["error"]
+
+
+def test_unsupported_command_returns_json_error():
+    result = run_cli("unknown-command")
+
+    assert result.returncode == 2
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert "invalid choice" in payload["error"]
