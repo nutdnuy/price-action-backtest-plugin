@@ -124,3 +124,45 @@ def test_unsupported_command_returns_json_error():
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert "invalid choice" in payload["error"]
+
+
+def test_run_command_writes_metrics(tmp_path):
+    init_result = run_cli(
+        "init-run",
+        "--name",
+        "SMA demo",
+        "--data-path",
+        str(SAMPLE_DATA),
+        "--strategy",
+        "sma_cross",
+        "--fast-window",
+        "5",
+        "--slow-window",
+        "20",
+        "--fee-bps",
+        "5",
+        "--slippage-bps",
+        "2",
+        "--output-root",
+        str(tmp_path),
+    )
+    assert init_result.returncode == 0, init_result.stderr
+    run_dir = Path(json.loads(init_result.stdout)["run_dir"])
+
+    run_result = run_cli("run", "--run-dir", str(run_dir))
+
+    assert run_result.returncode == 0, run_result.stderr
+    payload = json.loads(run_result.stdout)
+    metrics_path = run_dir / "metrics.json"
+
+    assert payload["ok"] is True
+    assert payload["run_dir"] == str(run_dir)
+    assert (run_dir / "equity.csv").exists()
+    assert (run_dir / "trades.csv").exists()
+    assert metrics_path.exists()
+
+    metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+    assert payload["metrics"] == metrics
+    assert "total_return" in metrics
+    assert "max_drawdown" in metrics
+    assert "trade_count" in metrics

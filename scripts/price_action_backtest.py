@@ -7,6 +7,11 @@ import re
 import sys
 from pathlib import Path
 
+ROOT = Path(__file__).resolve().parents[1]
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
 RUNTIME_DEPENDENCIES = ("pandas", "numpy", "plotly")
 CROSSOVER_STRATEGIES = {"sma_cross", "ema_cross"}
 UTC = getattr(dt, "UTC", vars(dt.timezone)["utc"])
@@ -110,6 +115,66 @@ def command_init_run(args):
     return 0
 
 
+def run_command(args):
+    run_dir = Path(args.run_dir)
+    config_path = run_dir / "config.json"
+
+    if not run_dir.exists():
+        emit_error(f"run directory does not exist: {args.run_dir}", field="run_dir")
+        return 1
+    if not config_path.exists():
+        emit_error(f"config does not exist: {config_path}", field="run_dir")
+        return 1
+
+    try:
+        from price_action_backtest.data import load_ohlcv
+        from price_action_backtest.engine import run_backtest
+        from price_action_backtest.indicators import add_indicators
+        from price_action_backtest.signals import SignalSpec, build_signal
+
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        slow_window = int(config["slow_window"])
+        fast_window = int(config["fast_window"])
+        data = load_ohlcv(config["data_path"], min_rows=max(slow_window, 2))
+        enriched = add_indicators(data, fast_window=fast_window, slow_window=slow_window)
+        signal = build_signal(
+            enriched,
+            SignalSpec(
+                strategy=config["strategy"],
+                rsi_entry=float(config.get("rsi_entry", 30.0)),
+                rsi_exit=float(config.get("rsi_exit", 70.0)),
+            ),
+        )
+        result = run_backtest(
+            enriched,
+            signal,
+            fee_bps=float(config.get("fee_bps", 0.0)),
+            slippage_bps=float(config.get("slippage_bps", 0.0)),
+        )
+    except ImportError as exc:
+        emit_error(f"missing runtime dependency: {exc}")
+        return 1
+    except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
+        emit_error(str(exc))
+        return 1
+
+    result.equity.to_csv(run_dir / "equity.csv", index=False)
+    result.trades.to_csv(run_dir / "trades.csv", index=False)
+    (run_dir / "metrics.json").write_text(
+        json.dumps(result.metrics, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    emit_json(
+        {
+            "ok": True,
+            "run_dir": str(run_dir),
+            "metrics": result.metrics,
+        }
+    )
+    return 0
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -144,6 +209,10 @@ def build_parser():
     init_run.add_argument("--slippage-bps", type=float, default=0.0)
     init_run.add_argument("--output-root", default="outputs")
     init_run.set_defaults(func=command_init_run)
+
+    run = subparsers.add_parser("run", help="Run a configured backtest.")
+    run.add_argument("--run-dir", required=True)
+    run.set_defaults(func=run_command)
 
     return parser
 
