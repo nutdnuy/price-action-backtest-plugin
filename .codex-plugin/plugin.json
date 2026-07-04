@@ -1,0 +1,41 @@
+{
+  "name": "price-action-backtest-plugin",
+  "version": "0.1.0",
+  "description": "Agent-native price action backtesting workflow for technical analysis, signal validation, and QuantSeras-style visualization reports.",
+  "author": {
+    "name": "nutdnuy",
+    "url": "https://github.com/nutdnuy"
+  },
+  "homepage": "https://github.com/nutdnuy/price-action-backtest-plugin",
+  "repository": "https://github.com/nutdnuy/price-action-backtest-plugin",
+  "license": "MIT",
+  "keywords": [
+    "backtest",
+    "technical-analysis",
+    "price-action",
+    "plotly",
+    "quant",
+    "claude-code",
+    "codex-agent"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Price Action Backtest",
+    "shortDescription": "Backtest price-based technical strategies and render beautiful reports.",
+    "longDescription": "A Claude Code and Codex plugin for reproducible price-action and technical-analysis backtests. It reads OHLCV CSV files, computes common indicators, runs deterministic signal backtests with costs and lookahead controls, exports artifacts, and creates QuantSeras-style dark HTML reports.",
+    "developerName": "nutdnuy",
+    "category": "Data & Analytics",
+    "capabilities": [
+      "Read",
+      "Write",
+      "Interactive"
+    ],
+    "websiteURL": "https://github.com/nutdnuy/price-action-backtest-plugin",
+    "defaultPrompt": [
+      "Backtest this OHLCV CSV.",
+      "Create a technical analysis report.",
+      "Audit this backtest for leakage."
+    ],
+    "brandColor": "#69F0AE"
+  }
+}

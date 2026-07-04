@@ -1,0 +1,23 @@
+{
+  "name": "price-action-backtest-plugin",
+  "description": "Marketplace for the Price Action Backtest plugin.",
+  "owner": {
+    "name": "nutdnuy",
+    "url": "https://github.com/nutdnuy"
+  },
+  "metadata": {
+    "description": "Claude-compatible Agent-native plugin for technical-analysis backtesting and visualization workflows."
+  },
+  "plugins": [
+    {
+      "name": "price-action-backtest-plugin",
+      "description": "Backtest OHLCV price strategies with explicit costs, leakage checks, and QuantSeras-style reports.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "nutdnuy",
+        "url": "https://github.com/nutdnuy"
+      }
+    }
+  ]
+}

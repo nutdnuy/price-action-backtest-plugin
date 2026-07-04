@@ -1,0 +1,22 @@
+{
+  "name": "price-action-backtest-plugin",
+  "version": "0.1.0",
+  "description": "Agent-native price action backtesting workflow for Claude Code and Codex.",
+  "author": {
+    "name": "nutdnuy",
+    "url": "https://github.com/nutdnuy"
+  },
+  "homepage": "https://github.com/nutdnuy/price-action-backtest-plugin",
+  "repository": "https://github.com/nutdnuy/price-action-backtest-plugin",
+  "license": "MIT",
+  "keywords": [
+    "backtest",
+    "technical-analysis",
+    "price-action",
+    "plotly",
+    "quant"
+  ],
+  "skills": [
+    "./skills/price-action-backtest"
+  ]
+}
