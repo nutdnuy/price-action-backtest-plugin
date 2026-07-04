@@ -562,7 +562,7 @@ def _format_cell(value: Any) -> str:
 
 
 def _number_class(value: Any) -> str:
-    if isinstance(value, (int, float)):
+    if isinstance(value, int | float):
         if value > 0:
             return "profit"
         if value < 0:
