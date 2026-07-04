@@ -9,6 +9,9 @@ Use this skill when working with price-based technical analysis, OHLCV CSV
 backtests, indicator calculation, signal validation, leakage checks, and
 QuantSeras-style visualization reports.
 
+Default user-facing language is Thai. Write reusable artifacts, schemas,
+technical docs, and code comments in English.
+
 ## Read First
 
 - Read `references/workflow.md` before setting up or interpreting a run.
@@ -87,6 +90,9 @@ python3 scripts/price_action_backtest.py audit-output --run-dir "$RUN_DIR"
 - Always state the sample period, cost assumptions, and validation limits.
 - Flag lookahead, data leakage, duplicate dates, unsorted dates, and missing
   OHLCV columns as audit issues.
+- Shift signals one bar and apply them only on the next bar before returns are
+  calculated to avoid lookahead.
+- Do not connect to brokers, place orders, route orders, or execute trades.
 - Keep V1 behavior long/cash only with no leverage.
 - Treat no-trade outputs as valid diagnostic information, not a failure to hide.
 
