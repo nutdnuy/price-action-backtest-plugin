@@ -31,3 +31,11 @@ def test_claude_manifest_names_skill_directory():
     manifest = (ROOT / ".claude-plugin/plugin.json").read_text(encoding="utf-8")
     assert '"name": "price-action-backtest-plugin"' in manifest
     assert '"./skills/price-action-backtest"' in manifest
+
+
+def test_skill_has_required_workflow_and_safety_language():
+    skill = (ROOT / "skills/price-action-backtest/SKILL.md").read_text(encoding="utf-8")
+    assert "OHLCV" in skill
+    assert "lookahead" in skill.lower()
+    assert "not trading instructions" in skill
+    assert "python3 scripts/price_action_backtest.py" in skill
