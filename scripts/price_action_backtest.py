@@ -23,7 +23,7 @@ def has_module(name):
 def command_setup_check(args):
     runtime = {name: has_module(name) for name in RUNTIME_DEPENDENCIES}
     payload = {
-        "python_ok": sys.version_info >= (3, 9),
+        "python_ok": sys.version_info >= (3, 11),
         "runtime": runtime,
     }
     payload["ok"] = payload["python_ok"] and all(runtime.values())

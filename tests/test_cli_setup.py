@@ -24,9 +24,9 @@ def test_setup_check_emits_json_status():
 
     assert result.returncode == 0, result.stderr
     payload = json.loads(result.stdout)
-    assert payload["python_ok"] is True
+    assert payload["python_ok"] is (sys.version_info >= (3, 11))
     assert set(payload["runtime"]) == {"pandas", "numpy", "plotly"}
-    assert payload["ok"] == all(payload["runtime"].values())
+    assert payload["ok"] == (payload["python_ok"] and all(payload["runtime"].values()))
 
 
 def test_init_run_creates_run_folder_and_config(tmp_path):
