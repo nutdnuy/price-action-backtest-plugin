@@ -14,11 +14,19 @@ SCRIPT = ROOT / "scripts" / "price_action_backtest.py"
 def sample_equity():
     return pd.DataFrame(
         {
-            "date": pd.date_range("2024-01-01", periods=4, freq="D"),
-            "close": [100.0, 102.0, 101.0, 105.0],
-            "strategy_equity": [1.0, 1.02, 1.01, 1.05],
-            "buy_hold_equity": [1.0, 1.02, 1.01, 1.05],
-            "drawdown": [0.0, 0.0, -0.0098039216, 0.0],
+            "date": pd.to_datetime(
+                [
+                    "2024-01-02",
+                    "2024-01-31",
+                    "2024-02-29",
+                    "2024-03-29",
+                    "2025-01-31",
+                ]
+            ),
+            "close": [100.0, 102.0, 101.0, 105.0, 107.0],
+            "strategy_equity": [1.0, 1.02, 1.01, 1.05, 1.07],
+            "buy_hold_equity": [1.0, 1.02, 1.01, 1.05, 1.07],
+            "drawdown": [0.0, 0.0, -0.0098039216, 0.0, 0.0],
         }
     )
 
@@ -90,7 +98,38 @@ def test_render_html_report_writes_quantseras_report(tmp_path):
     assert "#03DAC6" in html
     assert "Historical performance does not guarantee future performance" in html
     assert "Total Return" in html
+    assert "Monthly Returns Heatmap" in html
+    assert '"type":"heatmap"' in html
     assert "Plotly.newPlot" in html
+
+
+def test_render_html_report_handles_empty_trades(tmp_path):
+    report_path = render_html_report(
+        tmp_path,
+        "No Trade Report",
+        sample_equity(),
+        pd.DataFrame(),
+        {**sample_metrics(), "trade_count": 0},
+    )
+
+    html = Path(report_path).read_text(encoding="utf-8")
+    assert "No trades were generated for this run." in html
+    assert "Monthly Returns Heatmap" in html
+
+
+def test_render_html_report_creates_nested_output_path(tmp_path):
+    run_dir = tmp_path / "nested" / "outputs" / "run"
+
+    report_path = render_html_report(
+        run_dir,
+        "Nested Report",
+        sample_equity(),
+        sample_trades(),
+        sample_metrics(),
+    )
+
+    assert report_path == str(run_dir / "report.html")
+    assert (run_dir / "report.html").exists()
 
 
 def test_render_report_cli_reads_run_outputs_and_emits_report_path(tmp_path):

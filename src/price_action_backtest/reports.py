@@ -9,6 +9,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
 LIMITATIONS_TEXT = "Historical performance does not guarantee future performance"
+MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 THEME = {
     "dark": "#121212",
@@ -63,15 +64,22 @@ def render_html_report(
     clean_equity = _prepare_equity(equity)
     clean_trades = _prepare_trades(trades)
     fig = _build_figure(title, clean_equity, clean_trades)
+    heatmap = _build_monthly_heatmap(clean_equity)
     chart_html = fig.to_html(
         full_html=False,
         include_plotlyjs=True,
+        config={"displayModeBar": False, "responsive": True},
+    )
+    heatmap_html = heatmap.to_html(
+        full_html=False,
+        include_plotlyjs=False,
         config={"displayModeBar": False, "responsive": True},
     )
 
     html = _render_document(
         title=title,
         chart_html=chart_html,
+        heatmap_html=heatmap_html,
         metrics_html=_render_metrics_table(metrics),
         trades_html=_render_trades_table(clean_trades),
     )
@@ -217,6 +225,87 @@ def _build_figure(title: str, equity: pd.DataFrame, trades: pd.DataFrame) -> go.
     return fig
 
 
+def _build_monthly_heatmap(equity: pd.DataFrame) -> go.Figure:
+    monthly = _monthly_strategy_returns(equity)
+    years = sorted(monthly["year"].unique().tolist()) if not monthly.empty else []
+    values_by_cell = {
+        (int(row.year), int(row.month)): float(row.monthly_return)
+        for row in monthly.itertuples(index=False)
+    }
+    z = []
+    text = []
+    for year in years:
+        z_row = []
+        text_row = []
+        for month in range(1, 13):
+            value = values_by_cell.get((year, month))
+            z_row.append(value)
+            text_row.append("" if value is None else f"{value:+.1%}")
+        z.append(z_row)
+        text.append(text_row)
+
+    heatmap = go.Figure(
+        data=[
+            go.Heatmap(
+                x=MONTH_LABELS,
+                y=[str(year) for year in years],
+                z=z,
+                text=text,
+                texttemplate="%{text}",
+                textfont={"color": THEME["text_high"]},
+                colorscale=[
+                    [0.0, THEME["loss"]],
+                    [0.5, THEME["surface_3"]],
+                    [1.0, THEME["profit"]],
+                ],
+                zmid=0,
+                hovertemplate="%{y} %{x}<br>Return %{z:.2%}<extra></extra>",
+                colorbar={
+                    "title": {"text": "Return", "font": {"color": THEME["text_medium"]}},
+                    "tickformat": ".1%",
+                    "tickfont": {"color": THEME["text_medium"]},
+                },
+            )
+        ]
+    )
+    heatmap.update_layout(
+        title={"text": "Monthly Returns Heatmap", "x": 0.01, "xanchor": "left"},
+        height=max(260, 80 + (len(years) * 42)),
+        paper_bgcolor=THEME["dark"],
+        plot_bgcolor=THEME["dark"],
+        font={
+            "family": "Inter, IBM Plex Sans, -apple-system, sans-serif",
+            "color": THEME["text_high"],
+        },
+        margin={"l": 58, "r": 26, "t": 64, "b": 44},
+    )
+    heatmap.update_xaxes(
+        side="top",
+        gridcolor=THEME["grid"],
+        linecolor=THEME["grid"],
+        tickfont={"color": THEME["text_medium"]},
+    )
+    heatmap.update_yaxes(
+        autorange="reversed",
+        gridcolor=THEME["grid"],
+        linecolor=THEME["grid"],
+        tickfont={"color": THEME["text_medium"]},
+    )
+    return heatmap
+
+
+def _monthly_strategy_returns(equity: pd.DataFrame) -> pd.DataFrame:
+    indexed = equity.loc[:, ["date", "strategy_equity"]].set_index("date")
+    monthly = indexed["strategy_equity"].resample("ME").agg(["first", "last"]).dropna()
+    previous_month_end = monthly["last"].shift(1)
+    baseline = previous_month_end.fillna(monthly["first"])
+    returns = (monthly["last"] / baseline) - 1
+    output = returns.rename("monthly_return").reset_index()
+    output["year"] = output["date"].dt.year
+    output["month"] = output["date"].dt.month
+    return output.loc[:, ["year", "month", "monthly_return"]]
+
+
 def _add_trade_markers(fig: go.Figure, trades: pd.DataFrame) -> None:
     if trades.empty:
         return
@@ -251,7 +340,13 @@ def _add_trade_markers(fig: go.Figure, trades: pd.DataFrame) -> None:
         )
 
 
-def _render_document(title: str, chart_html: str, metrics_html: str, trades_html: str) -> str:
+def _render_document(
+    title: str,
+    chart_html: str,
+    heatmap_html: str,
+    metrics_html: str,
+    trades_html: str,
+) -> str:
     safe_title = escape(title)
     return f"""<!doctype html>
 <html lang="en">
@@ -370,6 +465,10 @@ def _render_document(title: str, chart_html: str, metrics_html: str, trades_html
       </p>
     </header>
     <section class="panel chart">{chart_html}</section>
+    <section class="panel chart">
+      <h2>Monthly Returns Heatmap</h2>
+      {heatmap_html}
+    </section>
     <section class="panel">
       <h2>Metrics</h2>
       {metrics_html}
