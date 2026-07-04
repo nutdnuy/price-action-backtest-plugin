@@ -248,6 +248,14 @@ def command_render_report(args):
     return 0
 
 
+def command_audit_output(args):
+    from price_action_backtest.audit import audit_run
+
+    result = audit_run(args.run_dir)
+    emit_json(result)
+    return 0 if result["ok"] else 1
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -290,6 +298,10 @@ def build_parser():
     report = subparsers.add_parser("render-report", help="Render a backtest HTML report.")
     report.add_argument("--run-dir", required=True)
     report.set_defaults(func=command_render_report)
+
+    audit = subparsers.add_parser("audit-output", help="Audit a completed backtest run folder.")
+    audit.add_argument("--run-dir", required=True)
+    audit.set_defaults(func=command_audit_output)
 
     return parser
 
