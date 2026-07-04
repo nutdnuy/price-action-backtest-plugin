@@ -10,8 +10,9 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SRC = ROOT / "src"
-if str(SRC) not in sys.path:
-    sys.path.insert(0, str(SRC))
+if str(SRC) in sys.path:
+    sys.path.remove(str(SRC))
+sys.path.insert(0, str(SRC))
 
 RUNTIME_DEPENDENCIES = ("pandas", "numpy", "plotly")
 CROSSOVER_STRATEGIES = {"sma_cross", "ema_cross"}
@@ -188,6 +189,65 @@ def run_command(args):
     return 0
 
 
+def require_run_file(run_dir, name):
+    path = run_dir / name
+    if not path.exists():
+        emit_error(f"required run output does not exist: {path}", field="run_dir")
+        return None
+    return path
+
+
+def command_render_report(args):
+    run_dir = Path(args.run_dir)
+    if not run_dir.exists():
+        emit_error(f"run directory does not exist: {args.run_dir}", field="run_dir")
+        return 1
+
+    config_path = require_run_file(run_dir, "config.json")
+    if config_path is None:
+        return 1
+    equity_path = require_run_file(run_dir, "equity.csv")
+    if equity_path is None:
+        return 1
+    trades_path = require_run_file(run_dir, "trades.csv")
+    if trades_path is None:
+        return 1
+    metrics_path = require_run_file(run_dir, "metrics.json")
+    if metrics_path is None:
+        return 1
+
+    try:
+        import pandas as pd
+
+        from price_action_backtest.reports import render_html_report
+
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        if not isinstance(config, dict):
+            raise ValueError("config.json must contain an object")
+        equity = pd.read_csv(equity_path)
+        trades = pd.read_csv(trades_path)
+        metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+        if not isinstance(metrics, dict):
+            raise ValueError("metrics.json must contain an object")
+        title = str(config.get("name") or "Price Action Backtest Report")
+        report_path = render_html_report(run_dir, title, equity, trades, metrics)
+    except ImportError as exc:
+        emit_error(f"missing runtime dependency: {exc}")
+        return 1
+    except (OSError, json.JSONDecodeError, TypeError, ValueError) as exc:
+        emit_error(str(exc))
+        return 1
+
+    emit_json(
+        {
+            "ok": True,
+            "run_dir": str(run_dir),
+            "report_path": report_path,
+        }
+    )
+    return 0
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -226,6 +286,10 @@ def build_parser():
     run = subparsers.add_parser("run", help="Run a configured backtest.")
     run.add_argument("--run-dir", required=True)
     run.set_defaults(func=run_command)
+
+    report = subparsers.add_parser("render-report", help="Render a backtest HTML report.")
+    report.add_argument("--run-dir", required=True)
+    report.set_defaults(func=command_render_report)
 
     return parser
 
