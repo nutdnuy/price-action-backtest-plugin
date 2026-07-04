@@ -22,7 +22,7 @@
 - Dates parse successfully, sort ascending, and contain no duplicates.
 - Numeric OHLCV fields parse successfully.
 - Positions/signals are shifted so `position[t+1] = signal[t]` before returns
-  are applied.
+  are applied; signal at close t applies only to the next bar's return.
 - Position values remain long/cash only.
 - Leverage is not used.
 - Fees and slippage are applied on position changes.

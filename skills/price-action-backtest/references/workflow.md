@@ -18,7 +18,7 @@
   execution.
 - Signals are computed using data available at close `t`.
 - Signal timing is explicit: `position[t+1] = signal[t]`.
-- A signal at close `t` applies only to the next bar's return.
+- A signal at close t applies only to the next bar's return.
 - Position changes occur only when the target position differs from the current
   position.
 - Fee and slippage are charged on position change.

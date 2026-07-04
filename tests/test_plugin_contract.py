@@ -63,3 +63,5 @@ def test_task2_docs_clarify_readiness_and_signal_timing():
         assert "intended V1 workflow" in command_doc
     assert "position[t+1] = signal[t]" in workflow
     assert "position[t+1] = signal[t]" in limitations
+    assert "signal at close t applies only to the next bar's return" in workflow
+    assert "signal at close t applies only to the next bar's return" in limitations
