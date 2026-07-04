@@ -22,7 +22,13 @@ def add_indicators(
     average_gain = gain.rolling(window=14).mean()
     average_loss = loss.rolling(window=14).mean()
     relative_strength = average_gain / average_loss
-    data["rsi_14"] = (100 - (100 / (1 + relative_strength))).fillna(100)
+    rsi = 100 - (100 / (1 + relative_strength))
+    no_gain = average_gain.eq(0)
+    no_loss = average_loss.eq(0)
+    rsi = rsi.mask(no_loss & average_gain.gt(0), 100)
+    rsi = rsi.mask(no_gain & average_loss.gt(0), 0)
+    rsi = rsi.mask(no_gain & no_loss, 50)
+    data["rsi_14"] = rsi
 
     ema_12 = close.ewm(span=12, adjust=False).mean()
     ema_26 = close.ewm(span=26, adjust=False).mean()
