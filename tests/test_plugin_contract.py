@@ -39,3 +39,27 @@ def test_skill_has_required_workflow_and_safety_language():
     assert "lookahead" in skill.lower()
     assert "not trading instructions" in skill
     assert "python3 scripts/price_action_backtest.py" in skill
+
+
+def test_task2_docs_clarify_readiness_and_signal_timing():
+    skill = (ROOT / "skills/price-action-backtest/SKILL.md").read_text(encoding="utf-8")
+    command_paths = [
+        "commands/backtest-setup.md",
+        "commands/backtest-init-run.md",
+        "commands/backtest-run.md",
+        "commands/backtest-report.md",
+        "commands/backtest-audit.md",
+    ]
+    workflow = (
+        ROOT / "skills/price-action-backtest/references/workflow.md"
+    ).read_text(encoding="utf-8")
+    limitations = (
+        ROOT / "skills/price-action-backtest/references/limitations.md"
+    ).read_text(encoding="utf-8")
+
+    assert "intended V1 workflow" in skill
+    for path in command_paths:
+        command_doc = (ROOT / path).read_text(encoding="utf-8")
+        assert "intended V1 workflow" in command_doc
+    assert "position[t+1] = signal[t]" in workflow
+    assert "position[t+1] = signal[t]" in limitations

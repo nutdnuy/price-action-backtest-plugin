@@ -37,6 +37,9 @@ technical docs, and code comments in English.
 
 ## CLI Commands
 
+These commands are the intended V1 workflow and become runnable after the
+CLI/runtime tasks are implemented.
+
 Setup check:
 
 ```bash

@@ -21,7 +21,8 @@
 - Required OHLCV columns exist with case-insensitive matching.
 - Dates parse successfully, sort ascending, and contain no duplicates.
 - Numeric OHLCV fields parse successfully.
-- Signal timing follows close `t` to position `t` through `t+1`.
+- Positions/signals are shifted so `position[t+1] = signal[t]` before returns
+  are applied.
 - Position values remain long/cash only.
 - Leverage is not used.
 - Fees and slippage are applied on position changes.

@@ -1,5 +1,8 @@
 # Backtest Init Run
 
+These commands are the intended V1 workflow and become runnable after the
+CLI/runtime tasks are implemented.
+
 If the CSV path is missing, ask the user for the OHLCV CSV path before running
 the command.
 

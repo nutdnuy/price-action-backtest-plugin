@@ -1,5 +1,8 @@
 # Backtest Audit
 
+These commands are the intended V1 workflow and become runnable after the
+CLI/runtime tasks are implemented.
+
 Find the latest `*-sma-demo` run directory and audit the output:
 
 ```bash

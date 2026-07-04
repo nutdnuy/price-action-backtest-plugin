@@ -17,7 +17,8 @@
 - V1 does not support shorting, leverage, margin, options, futures, or broker
   execution.
 - Signals are computed using data available at close `t`.
-- A signal at close `t` sets the position applied from `t` to `t+1`.
+- Signal timing is explicit: `position[t+1] = signal[t]`.
+- A signal at close `t` applies only to the next bar's return.
 - Position changes occur only when the target position differs from the current
   position.
 - Fee and slippage are charged on position change.
