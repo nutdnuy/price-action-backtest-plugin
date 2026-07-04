@@ -2,14 +2,17 @@
 
 ## Input Contract
 
-- Input data must be an OHLCV CSV.
-- Required columns are case-insensitive: date, open, high, low, close, volume.
+- Input data must be a price CSV with OHLC columns. Volume may be included as
+  optional OHLCV data.
+- Required columns are case-insensitive: date, open, high, low, close.
+- Optional columns are case-insensitive: volume.
 - Dates must be parsed into a single date column and sorted ascending before
   indicator calculation or backtesting.
 - Duplicate dates are rejected.
-- Rows with invalid dates or missing required OHLCV values must be rejected or
+- Rows with invalid dates or missing required date/OHLC values must be rejected or
   surfaced as audit failures.
-- Price and volume columns must be numeric after parsing.
+- Required price columns must be numeric after parsing; volume must be numeric
+  if present.
 
 ## Backtest Contract
 

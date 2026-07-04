@@ -23,8 +23,8 @@ technical docs, and code comments in English.
 
 ## Core Workflow
 
-1. Confirm the input is an OHLCV CSV with case-insensitive columns for date,
-   open, high, low, close, and volume.
+1. Confirm the input is a price CSV with required case-insensitive columns for
+   date, open, high, low, and close. Volume is optional when available.
 2. Sort dates ascending and reject duplicate dates.
 3. Initialize a run folder with a selected V1 strategy, parameter set, fee, and
    slippage assumptions.
@@ -92,7 +92,7 @@ python3 scripts/price_action_backtest.py audit-output --run-dir "$RUN_DIR"
   investment recommendation.
 - Always state the sample period, cost assumptions, and validation limits.
 - Flag lookahead, data leakage, duplicate dates, unsorted dates, and missing
-  OHLCV columns as audit issues.
+  required date/OHLC columns as audit issues.
 - Shift signals one bar and apply them only on the next bar before returns are
   calculated to avoid lookahead.
 - Do not connect to brokers, place orders, route orders, or execute trades.

@@ -18,9 +18,10 @@
 
 ## Minimum Audit Checks
 
-- Required OHLCV columns exist with case-insensitive matching.
+- Required date/OHLC columns exist with case-insensitive matching; volume is
+  optional.
 - Dates parse successfully, sort ascending, and contain no duplicates.
-- Numeric OHLCV fields parse successfully.
+- Numeric OHLC fields parse successfully; volume parses successfully if present.
 - Positions/signals are shifted so `position[t+1] = signal[t]` before returns
   are applied; signal at close t applies only to the next bar's return.
 - Position values remain long/cash only.

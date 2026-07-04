@@ -64,3 +64,16 @@ def test_task2_docs_clarify_readiness_and_signal_timing():
     assert "position[t+1] = signal[t]" in limitations
     assert "signal at close t applies only to the next bar's return" in workflow
     assert "signal at close t applies only to the next bar's return" in limitations
+
+
+def test_workflow_documents_optional_volume_contract():
+    workflow = (
+        ROOT / "skills/price-action-backtest/references/workflow.md"
+    ).read_text(encoding="utf-8")
+    workflow_lower = workflow.lower()
+
+    for column in ["date", "open", "high", "low", "close"]:
+        assert column in workflow_lower
+    assert "required columns" in workflow_lower
+    assert "volume" in workflow_lower
+    assert "optional" in workflow_lower
