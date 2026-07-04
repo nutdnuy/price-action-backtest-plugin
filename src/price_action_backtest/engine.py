@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from math import isfinite
 
 import pandas as pd
 
@@ -23,12 +24,34 @@ def _max_drawdown(equity: pd.Series) -> float:
     return float(drawdown.min())
 
 
+def _validate_frame(frame: pd.DataFrame) -> None:
+    required_columns = ("date", "close")
+    missing = [column for column in required_columns if column not in frame.columns]
+    if missing:
+        raise ValueError(f"missing columns: {', '.join(missing)}")
+
+
+def _validate_cost(name: str, value: float) -> None:
+    try:
+        cost = float(value)
+    except (TypeError, ValueError) as exc:
+        raise ValueError(f"{name} must be finite and non-negative") from exc
+    if not isfinite(cost) or cost < 0:
+        raise ValueError(f"{name} must be finite and non-negative")
+
+
 def run_backtest(
     frame: pd.DataFrame,
     signal: pd.Series,
     fee_bps: float,
     slippage_bps: float,
 ) -> BacktestResult:
+    _validate_frame(frame)
+    if len(signal) != len(frame):
+        raise ValueError(f"signal length must match frame length: {len(signal)} != {len(frame)}")
+    _validate_cost("fee_bps", fee_bps)
+    _validate_cost("slippage_bps", slippage_bps)
+
     data = frame.copy().reset_index(drop=True)
     close = pd.to_numeric(data["close"], errors="raise")
 
@@ -76,7 +99,12 @@ def run_backtest(
         else 0.0
     )
     annualized_volatility = float(strategy_return.std(ddof=0) * (TRADING_DAYS_PER_YEAR**0.5))
-    sharpe = annualized_return / annualized_volatility if annualized_volatility else 0.0
+    periodic_volatility = float(strategy_return.std(ddof=0))
+    sharpe = (
+        float(strategy_return.mean() / periodic_volatility * (TRADING_DAYS_PER_YEAR**0.5))
+        if periodic_volatility
+        else 0.0
+    )
 
     metrics: dict[str, float | int] = {
         "total_return": total_return,

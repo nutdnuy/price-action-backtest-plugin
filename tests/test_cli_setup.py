@@ -117,6 +117,32 @@ def test_init_run_invalid_crossover_windows_returns_json_error(tmp_path):
     assert "fast_window" in payload["error"]
 
 
+def test_init_run_negative_fee_returns_json_error(tmp_path):
+    result = run_cli(
+        "init-run",
+        "--name",
+        "Bad fee",
+        "--data-path",
+        str(SAMPLE_DATA),
+        "--strategy",
+        "sma_cross",
+        "--fast-window",
+        "5",
+        "--slow-window",
+        "20",
+        "--fee-bps",
+        "-1",
+        "--output-root",
+        str(tmp_path),
+    )
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["field"] == "fee_bps"
+    assert "fee_bps" in payload["error"]
+
+
 def test_unsupported_command_returns_json_error():
     result = run_cli("unknown-command")
 
@@ -166,3 +192,66 @@ def test_run_command_writes_metrics(tmp_path):
     assert "total_return" in metrics
     assert "max_drawdown" in metrics
     assert "trade_count" in metrics
+
+
+def test_run_missing_run_dir_returns_json_error(tmp_path):
+    missing_run_dir = tmp_path / "missing-run"
+
+    result = run_cli("run", "--run-dir", str(missing_run_dir))
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["field"] == "run_dir"
+    assert "run directory does not exist" in payload["error"]
+
+
+def test_run_missing_config_returns_json_error(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+
+    result = run_cli("run", "--run-dir", str(run_dir))
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert payload["field"] == "run_dir"
+    assert "config does not exist" in payload["error"]
+
+
+def test_run_invalid_config_json_returns_json_error(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    (run_dir / "config.json").write_text("{bad json", encoding="utf-8")
+
+    result = run_cli("run", "--run-dir", str(run_dir))
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert "Expecting property name" in payload["error"]
+
+
+def test_run_missing_data_path_in_config_returns_json_error(tmp_path):
+    run_dir = tmp_path / "run"
+    run_dir.mkdir()
+    missing_data_path = tmp_path / "missing.csv"
+    config = {
+        "data_path": str(missing_data_path),
+        "strategy": "sma_cross",
+        "fast_window": 1,
+        "slow_window": 2,
+        "fee_bps": 0,
+        "slippage_bps": 0,
+    }
+    (run_dir / "config.json").write_text(
+        json.dumps(config, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+
+    result = run_cli("run", "--run-dir", str(run_dir))
+
+    assert result.returncode == 1
+    payload = json.loads(result.stdout)
+    assert payload["ok"] is False
+    assert str(missing_data_path) in payload["error"]

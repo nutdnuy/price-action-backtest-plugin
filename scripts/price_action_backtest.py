@@ -3,6 +3,7 @@ import argparse
 import datetime as dt
 import importlib.util
 import json
+import math
 import re
 import sys
 from pathlib import Path
@@ -69,6 +70,13 @@ def make_run_dir(output_root, name, created_at):
     return run_dir
 
 
+def validate_bps_field(name, value):
+    if not math.isfinite(value) or value < 0:
+        emit_error(f"{name} must be finite and non-negative", field=name)
+        return False
+    return True
+
+
 def command_init_run(args):
     data_path = Path(args.data_path)
     if not data_path.exists():
@@ -80,6 +88,11 @@ def command_init_run(args):
             f"fast_window must be less than slow_window for {args.strategy}",
             field="fast_window",
         )
+        return 1
+
+    if not validate_bps_field("fee_bps", args.fee_bps):
+        return 1
+    if not validate_bps_field("slippage_bps", args.slippage_bps):
         return 1
 
     created_at = dt.datetime.now(UTC)
