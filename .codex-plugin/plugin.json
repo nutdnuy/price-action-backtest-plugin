@@ -22,7 +22,7 @@
   "interface": {
     "displayName": "Price Action Backtest",
     "shortDescription": "Backtest price-based technical strategies and render beautiful reports.",
-    "longDescription": "A Claude Code and Codex plugin for reproducible price-action and technical-analysis backtests. It reads OHLCV CSV files, computes common indicators, runs deterministic signal backtests with costs and lookahead controls, exports artifacts, and creates QuantSeras-style dark HTML reports.",
+    "longDescription": "A Claude Code and Codex plugin scaffold for a reproducible price-action and technical-analysis backtesting workflow. The intended workflow will read OHLCV CSV files, compute common indicators, run deterministic signal backtests with costs and lookahead controls, export artifacts, and create QuantSeras-style dark HTML reports as later implementation tasks are completed.",
     "developerName": "nutdnuy",
     "category": "Data & Analytics",
     "capabilities": [

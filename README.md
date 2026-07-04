@@ -29,12 +29,20 @@ Then install `price-action-backtest-plugin` from the Codex plugin UI.
 
 ## Runtime Setup
 
+Task 1 only scaffolds plugin metadata and documentation. The runtime commands
+below become runnable after the CLI, package modules, and sample data are added
+in later implementation tasks.
+
 ```bash
 python3 -m pip install -e ".[runtime,dev]"
 python3 scripts/price_action_backtest.py setup-check --strict
 ```
 
 ## Quick Start
+
+The quick-start flow is the intended V1 workflow. It is not operational in the
+Task 1 scaffold because `scripts/price_action_backtest.py` and
+`templates/sample-ohlcv.csv` are created by later tasks.
 
 ```bash
 python3 scripts/price_action_backtest.py init-run \
