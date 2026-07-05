@@ -1,6 +1,7 @@
 import math
 
 import pandas as pd
+import pytest
 
 from price_action_backtest.explainable_target import compute_price_structure_features
 
@@ -39,5 +40,22 @@ def test_compute_price_structure_features_uses_recent_window():
     assert features.channel_position == 0.4
     assert features.trend_return == (111.0 / 104.0) - 1.0
     assert features.drawdown_from_high == (111.0 / 112.0) - 1.0
-    assert features.annualized_volatility > 0.0
-    assert math.isfinite(features.annualized_volatility)
+
+    expected_returns = pd.Series([104.0, 106.0, 109.0, 111.0]).pct_change().dropna()
+    assert features.annualized_volatility == pytest.approx(
+        expected_returns.std(ddof=0) * math.sqrt(252)
+    )
+
+
+def test_compute_price_structure_features_rejects_too_short_lookback():
+    with pytest.raises(ValueError, match="lookback must be at least 2"):
+        compute_price_structure_features(sample_ohlcv(), lookback=1)
+
+
+def test_compute_price_structure_features_does_not_mutate_input_columns():
+    data = sample_ohlcv().rename(columns={"date": " Date ", "open": " Open "})
+    original_columns = list(data.columns)
+
+    compute_price_structure_features(data, lookback=4)
+
+    assert list(data.columns) == original_columns
