@@ -113,6 +113,39 @@ Webull notes:
 - Real credentials, `.env`, token directories, account IDs, and downloaded
   private market data must not be committed.
 
+## Webull Explainable Target Price MVP
+
+After fetching read-only Webull historical bars, build a deterministic target
+price explanation artifact from the OHLCV CSV:
+
+```bash
+.venv/bin/python scripts/price_action_backtest.py explain-target \
+  --symbol AAPL \
+  --data-path data/private/webull-aapl-d.csv \
+  --lookback 120 \
+  --horizon-days 126 \
+  --output outputs/aapl-target/target_explanation.json
+```
+
+Render the standalone HTML report:
+
+```bash
+.venv/bin/python scripts/price_action_backtest.py render-target-report \
+  --payload-path outputs/aapl-target/target_explanation.json \
+  --output outputs/aapl-target/target_report.html
+```
+
+The model is intentionally transparent and deterministic:
+
+- It uses only historical OHLCV price structure.
+- It computes a recent price channel, trend return, volatility, and drawdown
+  from the selected lookback window.
+- It creates heuristic P10/P25/P50/P75/P90 price bands for the selected horizon.
+- It writes the driver contributions used in the target estimate.
+
+This is a research artifact, not a price prediction guarantee, investment
+advice, or trading instruction. It does not use Webull trading/order APIs.
+
 ## Supported V1 Strategies
 
 - `sma_cross` — long/cash strategy that is long when the fast simple moving
