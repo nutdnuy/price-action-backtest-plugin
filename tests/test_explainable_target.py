@@ -122,6 +122,15 @@ def test_build_explainable_target_returns_ordered_probability_bands():
     assert payload["target_price"] == price_bands["p50"]
     assert payload["expected_return"] == payload["raw_expected_return"]
     assert payload["expected_return_clipped"] is False
+    features = payload["features"]
+    expected_p50 = round(features["last_close"] * (1 + payload["expected_return"]), 4)
+    assert price_bands["p50"] == expected_p50
+    assert payload["target_price"] == expected_p50
+    assert payload["expected_log_return"] == pytest.approx(
+        math.log1p(payload["expected_return"]), abs=1e-6
+    )
+    contribution_sum = round(sum(driver["contribution"] for driver in payload["drivers"]), 6)
+    assert contribution_sum == payload["expected_return"]
     assert [driver["name"] for driver in payload["drivers"]] == [
         "trend_return",
         "channel_position",
@@ -184,4 +193,11 @@ def test_build_explainable_target_reports_clipped_expected_return_metadata():
     assert payload["expected_return"] in {0.35, -0.35}
     contribution_sum = round(sum(driver["contribution"] for driver in payload["drivers"]), 6)
     assert contribution_sum == payload["expected_return"]
+    features = payload["features"]
+    expected_p50 = round(features["last_close"] * (1 + payload["expected_return"]), 4)
+    assert payload["price_bands"]["p50"] == expected_p50
+    assert payload["target_price"] == expected_p50
+    assert payload["expected_log_return"] == pytest.approx(
+        math.log1p(payload["expected_return"]), abs=1e-6
+    )
     assert payload["drivers"][-1]["name"] == "clipping_adjustment"

@@ -98,9 +98,10 @@ def build_explainable_target(
     rounded_expected_return = round(expected_return, 6)
     rounded_raw_expected_return = round(raw_expected_return, 6)
     expected_return_clipped = rounded_raw_expected_return != rounded_expected_return
+    expected_log_return = math.log1p(rounded_expected_return)
     width = _distribution_width(features, horizon_days=horizon_days)
     price_bands = {
-        label: round(features.last_close * math.exp(expected_return + z_value * width), 4)
+        label: round(features.last_close * math.exp(expected_log_return + z_value * width), 4)
         for label, z_value in QUANTILE_Z.items()
     }
 
@@ -112,6 +113,7 @@ def build_explainable_target(
         "expected_return": rounded_expected_return,
         "raw_expected_return": rounded_raw_expected_return,
         "expected_return_clipped": expected_return_clipped,
+        "expected_log_return": round(expected_log_return, 6),
         "target_price": price_bands["p50"],
         "price_bands": price_bands,
         "drivers": _drivers(
