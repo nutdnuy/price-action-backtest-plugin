@@ -16,6 +16,11 @@ LIMITATIONS_TEXT = (
 )
 TRADING_DAYS_PER_YEAR = 252
 QUANTILE_Z = {"p10": -1.2816, "p25": -0.6745, "p50": 0.0, "p75": 0.6745, "p90": 1.2816}
+DRIVER_WEIGHTS = {
+    "trend_return": 0.55,
+    "channel_position": 0.10,
+    "drawdown_from_high": -0.30,
+}
 
 
 @dataclass(frozen=True)
@@ -77,22 +82,31 @@ def compute_price_structure_features(
 def build_explainable_target(
     data: pd.DataFrame, *, symbol: str, lookback: int = 120, horizon_days: int = 126
 ) -> dict[str, Any]:
+    clean_symbol = symbol.strip().upper()
+    if not clean_symbol:
+        raise ValueError("symbol is required")
+    if isinstance(horizon_days, bool) or not isinstance(horizon_days, int):
+        raise ValueError("horizon_days must be an integer")
     if horizon_days < 1:
         raise ValueError("horizon_days must be positive")
 
     features = compute_price_structure_features(data, lookback=lookback)
+    raw_expected_return = _raw_expected_forward_return(features)
     expected_return = _expected_forward_return(features)
     width = _distribution_width(features, horizon_days=horizon_days)
     price_bands = {
-        quantile: features.last_close * (1.0 + expected_return + (z_score * width))
-        for quantile, z_score in QUANTILE_Z.items()
+        label: round(features.last_close * math.exp(expected_return + z_value * width), 4)
+        for label, z_value in QUANTILE_Z.items()
     }
 
     return {
-        "symbol": symbol.strip().upper(),
+        "symbol": clean_symbol,
         "as_of_date": features.as_of_date,
         "method": "price_structure_heuristic_v1",
-        "horizon_days": int(horizon_days),
+        "horizon_days": horizon_days,
+        "expected_return": round(expected_return, 6),
+        "raw_expected_return": round(raw_expected_return, 6),
+        "expected_return_clipped": raw_expected_return != expected_return,
         "target_price": price_bands["p50"],
         "price_bands": price_bands,
         "drivers": _drivers(features),
@@ -122,13 +136,18 @@ def write_target_explanation(
     return path
 
 
-def _expected_forward_return(features: PriceStructureFeatures) -> float:
-    raw = (
-        (0.55 * features.trend_return)
-        + (0.10 * features.channel_position)
-        - (0.30 * features.drawdown_from_high)
+def _raw_expected_forward_return(features: PriceStructureFeatures) -> float:
+    return sum(
+        [
+            DRIVER_WEIGHTS["trend_return"] * features.trend_return,
+            DRIVER_WEIGHTS["channel_position"] * features.channel_position,
+            DRIVER_WEIGHTS["drawdown_from_high"] * features.drawdown_from_high,
+        ]
     )
-    return _clip(raw, -0.35, 0.35)
+
+
+def _expected_forward_return(features: PriceStructureFeatures) -> float:
+    return _clip(_raw_expected_forward_return(features), -0.35, 0.35)
 
 
 def _distribution_width(features: PriceStructureFeatures, *, horizon_days: int) -> float:
@@ -142,23 +161,28 @@ def _distribution_width(features: PriceStructureFeatures, *, horizon_days: int) 
 def _drivers(features: PriceStructureFeatures) -> list[dict[str, float | str]]:
     return [
         {
-            "name": "trend_return",
-            "value": features.trend_return,
-            "weight": 0.55,
-            "contribution": 0.55 * features.trend_return,
-        },
-        {
-            "name": "channel_position",
-            "value": features.channel_position,
-            "weight": 0.10,
-            "contribution": 0.10 * features.channel_position,
-        },
-        {
-            "name": "drawdown_from_high",
-            "value": features.drawdown_from_high,
-            "weight": -0.30,
-            "contribution": -0.30 * features.drawdown_from_high,
-        },
+            "name": name,
+            "value": value,
+            "weight": weight,
+            "contribution": weight * value,
+        }
+        for name, value, weight in [
+            (
+                "trend_return",
+                features.trend_return,
+                DRIVER_WEIGHTS["trend_return"],
+            ),
+            (
+                "channel_position",
+                features.channel_position,
+                DRIVER_WEIGHTS["channel_position"],
+            ),
+            (
+                "drawdown_from_high",
+                features.drawdown_from_high,
+                DRIVER_WEIGHTS["drawdown_from_high"],
+            ),
+        ]
     ]
 
 

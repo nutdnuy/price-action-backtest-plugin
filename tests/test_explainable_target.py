@@ -33,6 +33,33 @@ def sample_ohlcv() -> pd.DataFrame:
     )
 
 
+def high_volatility_ohlcv() -> pd.DataFrame:
+    close = [100.0, 115.0, 95.0, 118.0, 92.0, 100.0]
+    return pd.DataFrame(
+        {
+            "date": pd.date_range("2026-02-01", periods=len(close), freq="D"),
+            "open": close,
+            "high": [price * 1.05 for price in close],
+            "low": [price * 0.95 for price in close],
+            "close": close,
+            "volume": [1000, 1200, 1300, 1400, 1500, 1600],
+        }
+    )
+
+
+def clipping_ohlcv() -> pd.DataFrame:
+    return pd.DataFrame(
+        {
+            "date": pd.date_range("2026-03-01", periods=4, freq="D"),
+            "open": [10.0, 20.0, 50.0, 100.0],
+            "high": [11.0, 22.0, 55.0, 101.0],
+            "low": [9.0, 18.0, 45.0, 95.0],
+            "close": [10.0, 20.0, 50.0, 100.0],
+            "volume": [1000, 1100, 1200, 1300],
+        }
+    )
+
+
 def test_compute_price_structure_features_uses_recent_window():
     features = compute_price_structure_features(sample_ohlcv(), lookback=4)
 
@@ -83,6 +110,8 @@ def test_build_explainable_target_returns_ordered_probability_bands():
         < price_bands["p90"]
     )
     assert payload["target_price"] == price_bands["p50"]
+    assert payload["expected_return"] == payload["raw_expected_return"]
+    assert payload["expected_return_clipped"] is False
     assert [driver["name"] for driver in payload["drivers"]] == [
         "trend_return",
         "channel_position",
@@ -104,3 +133,32 @@ def test_write_target_explanation_creates_json_file(tmp_path):
     assert payload["symbol"] == "AAPL"
     assert payload["input"]["lookback_rows"] == 4
     assert payload["target_price"] == payload["price_bands"]["p50"]
+
+
+def test_build_explainable_target_keeps_high_volatility_bands_positive():
+    payload = build_explainable_target(
+        high_volatility_ohlcv(), symbol="AAPL", lookback=6, horizon_days=126
+    )
+
+    for label in ["p10", "p25", "p50", "p75", "p90"]:
+        assert payload["price_bands"][label] > 0
+
+
+def test_build_explainable_target_rejects_blank_symbol():
+    with pytest.raises(ValueError, match="symbol is required"):
+        build_explainable_target(sample_ohlcv(), symbol="   ", lookback=4)
+
+
+def test_build_explainable_target_rejects_non_integer_horizon():
+    with pytest.raises(ValueError, match="horizon_days must be an integer"):
+        build_explainable_target(sample_ohlcv(), symbol="AAPL", lookback=4, horizon_days=126.0)
+
+
+def test_build_explainable_target_reports_clipped_expected_return_metadata():
+    payload = build_explainable_target(
+        clipping_ohlcv(), symbol="AAPL", lookback=4, horizon_days=126
+    )
+
+    assert payload["expected_return_clipped"] is True
+    assert payload["raw_expected_return"] != payload["expected_return"]
+    assert payload["expected_return"] in {0.35, -0.35}
