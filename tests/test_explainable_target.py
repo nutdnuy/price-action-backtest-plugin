@@ -84,6 +84,16 @@ def test_compute_price_structure_features_rejects_too_short_lookback():
         compute_price_structure_features(sample_ohlcv(), lookback=1)
 
 
+def test_compute_price_structure_features_rejects_non_integer_lookback():
+    with pytest.raises(ValueError, match="lookback must be an integer"):
+        compute_price_structure_features(sample_ohlcv(), lookback=4.0)
+
+
+def test_compute_price_structure_features_rejects_bool_lookback():
+    with pytest.raises(ValueError, match="lookback must be an integer"):
+        compute_price_structure_features(sample_ohlcv(), lookback=True)
+
+
 def test_compute_price_structure_features_does_not_mutate_input_columns():
     data = sample_ohlcv().rename(columns={"date": " Date ", "open": " Open "})
     original_columns = list(data.columns)
@@ -139,9 +149,19 @@ def test_build_explainable_target_keeps_high_volatility_bands_positive():
     payload = build_explainable_target(
         high_volatility_ohlcv(), symbol="AAPL", lookback=6, horizon_days=126
     )
+    price_bands = payload["price_bands"]
 
     for label in ["p10", "p25", "p50", "p75", "p90"]:
-        assert payload["price_bands"][label] > 0
+        assert math.isfinite(price_bands[label])
+        assert price_bands[label] > 0
+    assert (
+        price_bands["p10"]
+        < price_bands["p25"]
+        < price_bands["p50"]
+        < price_bands["p75"]
+        < price_bands["p90"]
+    )
+    assert payload["target_price"] == price_bands["p50"]
 
 
 def test_build_explainable_target_rejects_blank_symbol():
@@ -162,3 +182,6 @@ def test_build_explainable_target_reports_clipped_expected_return_metadata():
     assert payload["expected_return_clipped"] is True
     assert payload["raw_expected_return"] != payload["expected_return"]
     assert payload["expected_return"] in {0.35, -0.35}
+    contribution_sum = round(sum(driver["contribution"] for driver in payload["drivers"]), 6)
+    assert contribution_sum == payload["expected_return"]
+    assert payload["drivers"][-1]["name"] == "clipping_adjustment"

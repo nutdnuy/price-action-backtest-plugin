@@ -42,6 +42,8 @@ def compute_price_structure_features(
     data: pd.DataFrame, lookback: int = 120
 ) -> PriceStructureFeatures:
     """Compute recent OHLCV structure; channel_position is midpoint-centered, not 0-to-1."""
+    if isinstance(lookback, bool) or not isinstance(lookback, int):
+        raise ValueError("lookback must be an integer")
     if lookback < 2:
         raise ValueError("lookback must be at least 2")
 
@@ -93,6 +95,9 @@ def build_explainable_target(
     features = compute_price_structure_features(data, lookback=lookback)
     raw_expected_return = _raw_expected_forward_return(features)
     expected_return = _expected_forward_return(features)
+    rounded_expected_return = round(expected_return, 6)
+    rounded_raw_expected_return = round(raw_expected_return, 6)
+    expected_return_clipped = rounded_raw_expected_return != rounded_expected_return
     width = _distribution_width(features, horizon_days=horizon_days)
     price_bands = {
         label: round(features.last_close * math.exp(expected_return + z_value * width), 4)
@@ -104,12 +109,17 @@ def build_explainable_target(
         "as_of_date": features.as_of_date,
         "method": "price_structure_heuristic_v1",
         "horizon_days": horizon_days,
-        "expected_return": round(expected_return, 6),
-        "raw_expected_return": round(raw_expected_return, 6),
-        "expected_return_clipped": raw_expected_return != expected_return,
+        "expected_return": rounded_expected_return,
+        "raw_expected_return": rounded_raw_expected_return,
+        "expected_return_clipped": expected_return_clipped,
         "target_price": price_bands["p50"],
         "price_bands": price_bands,
-        "drivers": _drivers(features),
+        "drivers": _drivers(
+            features,
+            raw_expected_return=raw_expected_return,
+            expected_return=expected_return,
+            expected_return_clipped=expected_return_clipped,
+        ),
         "features": asdict(features),
         "input": {
             "lookback_requested": int(lookback),
@@ -158,8 +168,14 @@ def _distribution_width(features: PriceStructureFeatures, *, horizon_days: int) 
     return max(horizon_volatility, channel_width_component, 0.03)
 
 
-def _drivers(features: PriceStructureFeatures) -> list[dict[str, float | str]]:
-    return [
+def _drivers(
+    features: PriceStructureFeatures,
+    *,
+    raw_expected_return: float,
+    expected_return: float,
+    expected_return_clipped: bool,
+) -> list[dict[str, float | str]]:
+    drivers = [
         {
             "name": name,
             "value": value,
@@ -184,6 +200,20 @@ def _drivers(features: PriceStructureFeatures) -> list[dict[str, float | str]]:
             ),
         ]
     ]
+    if expected_return_clipped:
+        adjustment = round(expected_return - raw_expected_return, 6)
+        drivers.append(
+            {
+                "name": "clipping_adjustment",
+                "value": adjustment,
+                "contribution": adjustment,
+                "interpretation": (
+                    "Adjustment applied so the heuristic expected return stays within "
+                    "the capped research range."
+                ),
+            }
+        )
+    return drivers
 
 
 def _clip(value: float, lower: float, upper: float) -> float:
