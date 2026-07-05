@@ -4,7 +4,7 @@ import pandas as pd
 import pytest
 
 from price_action_backtest.explainable_target import write_target_explanation
-from price_action_backtest.target_reports import render_target_report
+from price_action_backtest.target_reports import REQUIRED_FEATURE_FIELDS, render_target_report
 
 
 def sample_ohlcv() -> pd.DataFrame:
@@ -44,7 +44,9 @@ def sample_payload() -> dict:
             "p90": 140.0,
         },
         "features": {
+            "as_of_date": "2026-01-07",
             "last_close": 111.0,
+            "lookback_rows": 4,
             "channel_low": 102.0,
             "channel_high": 112.0,
             "channel_midpoint": 107.0,
@@ -188,13 +190,14 @@ def test_render_target_report_rejects_missing_band_key(tmp_path):
         render_target_report(payload_path, tmp_path / "target_report.html")
 
 
-def test_render_target_report_rejects_missing_feature_key(tmp_path):
+@pytest.mark.parametrize("field", REQUIRED_FEATURE_FIELDS)
+def test_render_target_report_rejects_missing_feature_key(tmp_path, field):
     payload = sample_payload()
-    payload["features"].pop("last_close")
+    payload["features"].pop(field)
     payload_path = tmp_path / "target_explanation.json"
     payload_path.write_text(json.dumps(payload), encoding="utf-8")
 
-    with pytest.raises(ValueError, match="features missing required field: last_close"):
+    with pytest.raises(ValueError, match=f"features missing required field: {field}"):
         render_target_report(payload_path, tmp_path / "target_report.html")
 
 

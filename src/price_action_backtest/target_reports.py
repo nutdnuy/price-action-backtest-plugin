@@ -49,6 +49,20 @@ PERCENT_FIELDS = {
     "trend_return",
 }
 
+REQUIRED_FEATURE_FIELDS = (
+    "as_of_date",
+    "last_close",
+    "lookback_rows",
+    "channel_low",
+    "channel_high",
+    "channel_midpoint",
+    "channel_width_pct",
+    "channel_position",
+    "trend_return",
+    "annualized_volatility",
+    "drawdown_from_high",
+)
+
 
 def render_target_report(payload_path: str | Path, output_path: str | Path) -> Path:
     """Render a standalone QuantSeras-style target explanation report."""
@@ -386,7 +400,7 @@ def _validate_payload(payload: Any) -> None:
         if field not in payload["price_bands"]:
             raise ValueError(f"target explanation price_bands missing required field: {field}")
 
-    for field in ["last_close", "channel_low", "channel_high"]:
+    for field in REQUIRED_FEATURE_FIELDS:
         if field not in payload["features"]:
             raise ValueError(f"target explanation features missing required field: {field}")
 
