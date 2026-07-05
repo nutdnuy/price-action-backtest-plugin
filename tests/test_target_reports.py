@@ -158,6 +158,56 @@ def test_render_target_report_rejects_invalid_drivers_type(tmp_path):
         render_target_report(payload_path, tmp_path / "target_report.html")
 
 
+def test_render_target_report_rejects_driver_items_that_are_not_objects(tmp_path):
+    payload = sample_payload()
+    payload["drivers"] = [1]
+    payload_path = tmp_path / "target_explanation.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="drivers must contain objects"):
+        render_target_report(payload_path, tmp_path / "target_report.html")
+
+
+def test_render_target_report_rejects_empty_drivers(tmp_path):
+    payload = sample_payload()
+    payload["drivers"] = []
+    payload_path = tmp_path / "target_explanation.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="drivers must not be empty"):
+        render_target_report(payload_path, tmp_path / "target_report.html")
+
+
+def test_render_target_report_rejects_missing_band_key(tmp_path):
+    payload = sample_payload()
+    payload["price_bands"].pop("p10")
+    payload_path = tmp_path / "target_explanation.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="price_bands missing required field: p10"):
+        render_target_report(payload_path, tmp_path / "target_report.html")
+
+
+def test_render_target_report_rejects_missing_feature_key(tmp_path):
+    payload = sample_payload()
+    payload["features"].pop("last_close")
+    payload_path = tmp_path / "target_explanation.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="features missing required field: last_close"):
+        render_target_report(payload_path, tmp_path / "target_report.html")
+
+
+def test_render_target_report_rejects_driver_missing_required_field(tmp_path):
+    payload = sample_payload()
+    payload["drivers"][0].pop("name")
+    payload_path = tmp_path / "target_explanation.json"
+    payload_path.write_text(json.dumps(payload), encoding="utf-8")
+
+    with pytest.raises(ValueError, match="driver missing required field: name"):
+        render_target_report(payload_path, tmp_path / "target_report.html")
+
+
 def test_render_target_report_escapes_string_content(tmp_path):
     payload = sample_payload()
     payload["symbol"] = "<script>alert(1)</script>"

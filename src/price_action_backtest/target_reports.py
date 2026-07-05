@@ -382,6 +382,24 @@ def _validate_payload(payload: Any) -> None:
     if not isinstance(payload["drivers"], list):
         raise ValueError("target explanation field must be a list: drivers")
 
+    for field in BAND_LABELS:
+        if field not in payload["price_bands"]:
+            raise ValueError(f"target explanation price_bands missing required field: {field}")
+
+    for field in ["last_close", "channel_low", "channel_high"]:
+        if field not in payload["features"]:
+            raise ValueError(f"target explanation features missing required field: {field}")
+
+    if not payload["drivers"]:
+        raise ValueError("target explanation drivers must not be empty")
+
+    for driver in payload["drivers"]:
+        if not isinstance(driver, dict):
+            raise ValueError("target explanation drivers must contain objects")
+        for field in ["name", "value", "contribution"]:
+            if field not in driver:
+                raise ValueError(f"target explanation driver missing required field: {field}")
+
 
 def _subtitle(payload: dict[str, Any]) -> str:
     parts = []
