@@ -272,9 +272,13 @@ def build_explainable_target(
 
     features = compute_price_structure_features(data, lookback=lookback)
     expected_return = _expected_forward_return(features)
+    expected_log_return = math.log1p(expected_return)
     distribution_width = _distribution_width(features, horizon_days=horizon_days)
     price_bands = {
-        label: round(features.last_close * (1.0 + expected_return + z_value * distribution_width), 4)
+        label: round(
+            features.last_close * math.exp(expected_log_return + z_value * distribution_width),
+            4,
+        )
         for label, z_value in QUANTILE_Z.items()
     }
     drivers = _drivers(features)
@@ -284,6 +288,7 @@ def build_explainable_target(
         "as_of_date": features.as_of_date,
         "method": "price_structure_heuristic_v1",
         "horizon_days": int(horizon_days),
+        "expected_log_return": round(expected_log_return, 6),
         "target_price": price_bands["p50"],
         "price_bands": price_bands,
         "features": asdict(features),
