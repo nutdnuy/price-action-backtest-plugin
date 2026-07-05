@@ -2,6 +2,9 @@ outputs/
 data/private/
 *.env
 .env
+.webull-token/
+webull_data_sdk.log
+*.log
 .venv/
 venv/
 __pycache__/

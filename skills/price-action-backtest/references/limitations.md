@@ -6,6 +6,12 @@
 - Results depend on data quality, sample period, survivorship bias, corporate
   actions, missing rows, stale prices, timezone handling, and vendor
   adjustments.
+- Webull-imported daily bars and higher intervals are forward-adjusted according
+  to Webull's API documentation; minute bars are unadjusted. Interpret mixed
+  intervals carefully.
+- Webull stock/ETF market data access can require an active OpenAPI market data
+  subscription. Permission failures are data-access issues, not strategy
+  failures.
 - Costs, taxes, liquidity, borrow constraints, market impact, spreads, and
   execution latency are simplified or omitted unless explicitly modeled.
 - Parameter choices can be overfit to the sample period.
@@ -15,6 +21,8 @@
 - No-trade runs are valid diagnostics and should be reported plainly.
 - Outputs provide no personalized investment advice.
 - Reports are research artifacts and not trading instructions.
+- Webull support is read-only market-data import and must not be used for order
+  placement, execution, or broker automation.
 
 ## Minimum Audit Checks
 
@@ -33,3 +41,5 @@
 - Output language includes historical-performance caveats and avoids
   personalized investment advice.
 - Lookahead and data leakage risks are checked and surfaced.
+- Webull credentials, tokens, account IDs, `.env` files, and downloaded private
+  market data are not committed or printed in reports.

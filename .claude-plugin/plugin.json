@@ -1,7 +1,7 @@
 {
   "name": "price-action-backtest-plugin",
-  "version": "0.1.0",
-  "description": "Agent-native price action backtesting workflow for Claude Code and Codex.",
+  "version": "0.2.0",
+  "description": "Agent-native Webull market-data import and price-action backtesting workflow for Claude Code and Codex.",
   "author": {
     "name": "nutdnuy",
     "url": "https://github.com/nutdnuy"
@@ -12,6 +12,8 @@
   "keywords": [
     "backtest",
     "technical-analysis",
+    "webull",
+    "market-data",
     "price-action",
     "plotly",
     "quant"

@@ -2,6 +2,9 @@
 
 ## Input Contract
 
+- Optional Webull input flow fetches read-only historical bars from the Webull
+  Market Data API into a local OHLCV CSV under a gitignored folder such as
+  `data/private/`.
 - Input data must be a price CSV with OHLC columns. Volume may be included as
   optional OHLCV data.
 - Required columns are case-insensitive: date, open, high, low, close.
@@ -13,6 +16,11 @@
   surfaced as audit failures.
 - Required price columns must be numeric after parsing; volume must be numeric
   if present.
+- Webull daily bars and higher intervals are forward-adjusted according to
+  Webull's API documentation; minute bars are unadjusted. Note the interval and
+  source when presenting results.
+- Do not commit real Webull credentials, token directories, or downloaded
+  private market data.
 
 ## Backtest Contract
 

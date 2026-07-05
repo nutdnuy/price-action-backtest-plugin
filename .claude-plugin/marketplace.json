@@ -6,13 +6,13 @@
     "url": "https://github.com/nutdnuy"
   },
   "metadata": {
-    "description": "Claude-compatible Agent-native plugin for technical-analysis backtesting and visualization workflows."
+    "description": "Claude-compatible Agent-native plugin for Webull market-data import, technical-analysis backtesting, and visualization workflows."
   },
   "plugins": [
     {
       "name": "price-action-backtest-plugin",
-      "description": "Scaffold a reproducible OHLCV backtest workflow with explicit costs, leakage checks, and QuantSeras-style reports.",
-      "version": "0.1.0",
+      "description": "Run reproducible OHLCV or Webull historical-bar backtests with explicit costs, leakage checks, audits, and QuantSeras-style reports.",
+      "version": "0.2.0",
       "source": "./",
       "author": {
         "name": "nutdnuy",

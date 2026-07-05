@@ -44,6 +44,7 @@ def test_task2_docs_clarify_readiness_and_signal_timing():
     skill = (ROOT / "skills/price-action-backtest/SKILL.md").read_text(encoding="utf-8")
     command_paths = [
         "commands/backtest-setup.md",
+        "commands/backtest-webull-fetch.md",
         "commands/backtest-init-run.md",
         "commands/backtest-run.md",
         "commands/backtest-report.md",
@@ -64,6 +65,25 @@ def test_task2_docs_clarify_readiness_and_signal_timing():
     assert "position[t+1] = signal[t]" in limitations
     assert "signal at close t applies only to the next bar's return" in workflow
     assert "signal at close t applies only to the next bar's return" in limitations
+
+
+def test_skill_documents_webull_read_only_import():
+    skill = (ROOT / "skills/price-action-backtest/SKILL.md").read_text(encoding="utf-8")
+    workflow = (
+        ROOT / "skills/price-action-backtest/references/workflow.md"
+    ).read_text(encoding="utf-8")
+    limitations = (
+        ROOT / "skills/price-action-backtest/references/limitations.md"
+    ).read_text(encoding="utf-8")
+    command = (ROOT / "commands/backtest-webull-fetch.md").read_text(encoding="utf-8")
+
+    for text in [skill, workflow, limitations, command]:
+        assert "Webull" in text
+        assert "read-only" in text
+    assert "webull-fetch-bars" in command
+    assert "data/private" in command
+    assert "WEBULL_APP_SECRET" in command
+    assert "place orders" in skill
 
 
 def test_workflow_documents_optional_volume_contract():

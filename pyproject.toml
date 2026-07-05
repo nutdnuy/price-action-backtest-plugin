@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "price-action-backtest-plugin"
-version = "0.1.0"
-description = "Claude Code and Codex plugin for price-action backtests and visualization reports."
+version = "0.2.0"
+description = "Claude Code and Codex plugin for price-action backtests, Webull market data import, and visualization reports."
 readme = "README.md"
 requires-python = ">=3.11"
 license = { text = "MIT" }
@@ -17,6 +17,9 @@ runtime = [
     "pandas>=2.2.0",
     "numpy>=1.26.0",
     "plotly>=5.22.0"
+]
+webull = [
+    "webull-openapi-python-sdk>=2.0.12"
 ]
 dev = [
     "pytest>=8.2.0",

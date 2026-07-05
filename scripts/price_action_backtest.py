@@ -256,6 +256,63 @@ def command_audit_output(args):
     return 0 if result["ok"] else 1
 
 
+def default_webull_output_path(args):
+    symbol = slugify(args.symbol.upper())
+    timespan = slugify(args.timespan.upper())
+    return Path(args.output_root) / f"webull-{symbol}-{timespan}.csv"
+
+
+def command_webull_fetch_bars(args):
+    output_path = Path(args.output) if args.output else default_webull_output_path(args)
+    try:
+        from price_action_backtest.webull import (
+            build_webull_data_client,
+            fetch_stock_bars,
+            load_webull_settings,
+            write_webull_bars_csv,
+        )
+
+        settings = load_webull_settings(args.env_file)
+        data_client = build_webull_data_client(settings)
+        payload = fetch_stock_bars(
+            data_client,
+            args.symbol,
+            category=args.category,
+            timespan=args.timespan,
+            count=args.count,
+            real_time_required=not args.include_latest,
+            trading_sessions=args.trading_sessions,
+            start_time=args.start_time_ms,
+            end_time=args.end_time_ms,
+        )
+        written = write_webull_bars_csv(payload, output_path, min_rows=args.min_rows)
+    except ImportError as exc:
+        emit_error(
+            "missing Webull SDK dependency; install with "
+            "python3 -m pip install -e '.[runtime,webull]' "
+            f"({exc})"
+        )
+        return 1
+    except (OSError, RuntimeError, TypeError, ValueError) as exc:
+        emit_error(str(exc))
+        return 1
+    except Exception as exc:
+        emit_error(f"Webull SDK error: {exc}")
+        return 1
+
+    emit_json(
+        {
+            "ok": True,
+            "symbol": args.symbol.strip().upper(),
+            "category": args.category.strip().upper(),
+            "timespan": args.timespan.strip().upper(),
+            "count_requested": args.count,
+            "output_path": str(written),
+        }
+    )
+    return 0
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -302,6 +359,28 @@ def build_parser():
     audit = subparsers.add_parser("audit-output", help="Audit a completed backtest run folder.")
     audit.add_argument("--run-dir", required=True)
     audit.set_defaults(func=command_audit_output)
+
+    webull = subparsers.add_parser(
+        "webull-fetch-bars",
+        help="Fetch Webull historical bars as a local OHLCV CSV for backtesting.",
+    )
+    webull.add_argument("--symbol", required=True)
+    webull.add_argument("--category", default="US_STOCK", choices=("US_STOCK", "US_ETF"))
+    webull.add_argument("--timespan", default="D")
+    webull.add_argument("--count", type=int, default=200)
+    webull.add_argument(
+        "--include-latest",
+        action="store_true",
+        help="Include latest market data instead of only completed bars.",
+    )
+    webull.add_argument("--trading-sessions")
+    webull.add_argument("--start-time-ms", type=int)
+    webull.add_argument("--end-time-ms", type=int)
+    webull.add_argument("--min-rows", type=int, default=2)
+    webull.add_argument("--env-file", default=".env")
+    webull.add_argument("--output")
+    webull.add_argument("--output-root", default="data/private")
+    webull.set_defaults(func=command_webull_fetch_bars)
 
     return parser
 

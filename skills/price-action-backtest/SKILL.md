@@ -1,13 +1,13 @@
 ---
 name: price-action-backtest
-description: Use for price-based technical analysis, OHLCV CSV backtests, indicator calculation, signal validation, leakage checks, and QuantSeras-style visualization reports.
+description: Use for price-based technical analysis, Webull historical-bar imports, OHLCV CSV backtests, indicator calculation, signal validation, leakage checks, and QuantSeras-style visualization reports.
 ---
 
 # Price Action Backtest
 
-Use this skill when working with price-based technical analysis, OHLCV CSV
-backtests, indicator calculation, signal validation, leakage checks, and
-QuantSeras-style visualization reports.
+Use this skill when working with price-based technical analysis, Webull
+historical-bar imports, OHLCV CSV backtests, indicator calculation, signal
+validation, leakage checks, and QuantSeras-style visualization reports.
 
 Default user-facing language is Thai. Write reusable artifacts, schemas,
 technical docs, and code comments in English.
@@ -18,21 +18,23 @@ technical docs, and code comments in English.
 - Read `references/limitations.md` before presenting results or audit findings.
 - Treat all outputs as research artifacts and not trading instructions.
 - Check for lookahead leakage before accepting any signal or report.
-- Do not connect to brokers, place orders, or imply that historical results
-  predict future returns.
+- Webull integration is read-only market-data import. Do not place orders or
+  imply that historical results predict future returns.
 
 ## Core Workflow
 
-1. Confirm the input is a price CSV with required case-insensitive columns for
+1. If the user wants Webull data, fetch read-only historical bars to a local
+   gitignored OHLCV CSV first.
+2. Confirm the input is a price CSV with required case-insensitive columns for
    date, open, high, low, and close. Volume is optional when available.
-2. Sort dates ascending and reject duplicate dates.
-3. Initialize a run folder with a selected V1 strategy, parameter set, fee, and
+3. Sort dates ascending and reject duplicate dates.
+4. Initialize a run folder with a selected V1 strategy, parameter set, fee, and
    slippage assumptions.
-4. Run the backtest using signal-at-close timing and next-period position
+5. Run the backtest using signal-at-close timing and next-period position
    application.
-5. Render the visualization report with price markers, equity, drawdown,
+6. Render the visualization report with price markers, equity, drawdown,
    monthly heatmap, metrics, trade preview, and limitations.
-6. Audit the output for input quality, lookahead risk, missing report artifacts,
+7. Audit the output for input quality, lookahead risk, missing report artifacts,
    and limitations language.
 
 ## CLI Commands
@@ -44,6 +46,17 @@ Setup check:
 
 ```bash
 python3 scripts/price_action_backtest.py setup-check --strict
+```
+
+Optional Webull historical bars import:
+
+```bash
+python3 -m pip install -e ".[runtime,webull]"
+python3 scripts/price_action_backtest.py webull-fetch-bars \
+  --symbol AAPL \
+  --timespan D \
+  --count 500 \
+  --output data/private/webull-aapl-d.csv
 ```
 
 Initialize a run:
@@ -95,7 +108,10 @@ python3 scripts/price_action_backtest.py audit-output --run-dir "$RUN_DIR"
   required date/OHLC columns as audit issues.
 - Shift signals one bar and apply them only on the next bar before returns are
   calculated to avoid lookahead.
-- Do not connect to brokers, place orders, route orders, or execute trades.
+- Webull support is market-data only. Do not call trading/order APIs, route
+  orders, place orders, or execute trades.
+- Never print or commit real Webull app keys, app secrets, tokens, account IDs,
+  `.env` files, or downloaded private market data.
 - Keep V1 behavior long/cash only with no leverage.
 - Treat no-trade outputs as valid diagnostic information, not a failure to hide.
 

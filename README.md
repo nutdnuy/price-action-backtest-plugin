@@ -6,11 +6,12 @@ from OHLCV price data, with QuantSeras-style visualization reports.
 The workflow:
 
 ```text
-OHLCV CSV -> indicators -> signal -> backtest -> metrics -> report -> audit
+Webull bars or OHLCV CSV -> indicators -> signal -> backtest -> metrics -> report -> audit
 ```
 
-This plugin does not connect to brokers, does not place orders, and does not
-claim that historical results predict future returns.
+Webull support is read-only market-data import. This plugin does not place
+orders, route orders, execute trades, or claim that historical results predict
+future returns.
 
 ## Install In Codex
 
@@ -34,6 +35,12 @@ python3 -m pip install -e ".[runtime,dev]"
 python3 scripts/price_action_backtest.py setup-check --strict
 ```
 
+For Webull historical bars import, install the optional SDK extra:
+
+```bash
+python3 -m pip install -e ".[runtime,webull]"
+```
+
 ## Quick Start
 
 ```bash
@@ -54,6 +61,57 @@ python3 scripts/price_action_backtest.py run --run-dir "$RUN_DIR"
 python3 scripts/price_action_backtest.py render-report --run-dir "$RUN_DIR"
 python3 scripts/price_action_backtest.py audit-output --run-dir "$RUN_DIR"
 ```
+
+## Webull Historical Bars
+
+This plugin can fetch read-only historical bars from the official Webull
+Market Data API through the official Python SDK, normalize them to the same
+OHLCV CSV contract, then run the existing backtest workflow.
+
+Set credentials in a local `.env` file or shell environment:
+
+```bash
+WEBULL_ENV=uat
+WEBULL_REGION=us
+WEBULL_APP_KEY=replace_with_your_app_key
+WEBULL_APP_SECRET=replace_with_your_app_secret
+WEBULL_TOKEN_DIR=.webull-token
+```
+
+Fetch daily bars into a gitignored private data folder:
+
+```bash
+python3 scripts/price_action_backtest.py webull-fetch-bars \
+  --symbol AAPL \
+  --timespan D \
+  --count 500 \
+  --output data/private/webull-aapl-d.csv
+```
+
+Then point `init-run --data-path` at that CSV:
+
+```bash
+python3 scripts/price_action_backtest.py init-run \
+  --name "AAPL Webull SMA" \
+  --data-path data/private/webull-aapl-d.csv \
+  --strategy sma_cross \
+  --fast-window 20 \
+  --slow-window 50 \
+  --fee-bps 5 \
+  --slippage-bps 2 \
+  --output-root outputs
+```
+
+Webull notes:
+
+- The command uses the official Webull SDK and the Market Data API historical
+  bars endpoint.
+- US stock/ETF historical market data may require an active OpenAPI market data
+  subscription.
+- Daily bars and above are forward-adjusted according to Webull's API
+  documentation; minute bars are unadjusted.
+- Real credentials, `.env`, token directories, account IDs, and downloaded
+  private market data must not be committed.
 
 ## Supported V1 Strategies
 
@@ -88,6 +146,7 @@ Reports use a QuantSeras-style dark research dashboard:
 - Costs and slippage are simple basis-point assumptions.
 - Results depend on data quality, survivorship, corporate actions, and sample period.
 - Reports are research artifacts, not trading instructions.
+- Webull integration is read-only market data import; it is not live trading.
 
 ## Development Validation
 
@@ -105,6 +164,13 @@ environment if it is not already present:
 ```bash
 .venv/bin/python -m pip install PyYAML
 .venv/bin/python /Users/nuthdanai/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py .
+```
+
+Optional Webull import checks do not call live Webull in CI; they use fake
+clients. Install the Webull extra only when you need real market data:
+
+```bash
+.venv/bin/python -m pip install -e ".[runtime,webull]"
 ```
 
 Run the end-to-end smoke workflow before publication:
@@ -157,6 +223,14 @@ fast_window=<fast>, slow_window=<slow>, include realistic fee and slippage bps,
 render the report, audit the artifacts, and summarize limitations including
 lookahead handling, cost assumptions, and why historical performance is not a
 forecast.
+```
+
+```text
+Use price-action-backtest-plugin to fetch read-only Webull historical bars for
+AAPL with timespan D and count 500 into data/private/webull-aapl-d.csv, then
+run an SMA 20/50 backtest with fee_bps=5 and slippage_bps=2, render the report,
+audit the output, and summarize the data-source limitations. Do not place or
+preview orders.
 ```
 
 ```text

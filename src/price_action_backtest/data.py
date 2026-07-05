@@ -12,8 +12,7 @@ class DataQualityError(ValueError):
     pass
 
 
-def load_ohlcv(path: str | Path, min_rows: int = 2) -> pd.DataFrame:
-    data = pd.read_csv(path)
+def normalize_ohlcv_frame(data: pd.DataFrame, min_rows: int = 2) -> pd.DataFrame:
     data.columns = [column.strip().lower() for column in data.columns]
 
     missing_columns = [column for column in REQUIRED_COLUMNS if column not in data.columns]
@@ -55,3 +54,7 @@ def load_ohlcv(path: str | Path, min_rows: int = 2) -> pd.DataFrame:
         raise DataQualityError(f"too few rows: expected at least {min_rows}")
 
     return data.sort_values("date").reset_index(drop=True)
+
+
+def load_ohlcv(path: str | Path, min_rows: int = 2) -> pd.DataFrame:
+    return normalize_ohlcv_frame(pd.read_csv(path), min_rows=min_rows)
