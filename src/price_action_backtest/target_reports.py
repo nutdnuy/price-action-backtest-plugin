@@ -30,6 +30,16 @@ BAND_LABELS = {
     "p90": "P90",
 }
 
+DRIVER_INTERPRETATIONS = {
+    "trend_return": "Positive when the recent price window trends upward.",
+    "channel_position": "Positive when the close is above the channel midpoint.",
+    "drawdown_from_high": "Positive when the close is below the recent channel high.",
+    "clipping_adjustment": (
+        "Adjustment applied so the heuristic expected return stays within the capped "
+        "research range."
+    ),
+}
+
 PERCENT_FIELDS = {
     "annualized_volatility",
     "channel_width_pct",
@@ -44,8 +54,7 @@ def render_target_report(payload_path: str | Path, output_path: str | Path) -> P
     """Render a standalone QuantSeras-style target explanation report."""
     source_path = Path(payload_path)
     payload = json.loads(source_path.read_text(encoding="utf-8"))
-    if not isinstance(payload, dict):
-        raise ValueError("target explanation JSON must contain an object")
+    _validate_payload(payload)
 
     report_path = Path(output_path)
     report_path.parent.mkdir(parents=True, exist_ok=True)
@@ -281,7 +290,10 @@ def _drivers_table(payload: dict[str, Any]) -> str:
         value = driver.get("value")
         weight = driver.get("weight")
         contribution = driver.get("contribution")
-        interpretation = html.escape(str(driver.get("interpretation", "")))
+        raw_interpretation = driver.get("interpretation") or DRIVER_INTERPRETATIONS.get(
+            str(driver.get("name", "")), ""
+        )
+        interpretation = html.escape(str(raw_interpretation))
         rows.append(
             "<tr>"
             f"<td>{name}</td>"
@@ -342,6 +354,33 @@ def _format_number(value: Any, *, field_name: str | None = None) -> str:
             return f"{value:.2%}"
         return f"{value:.4f}"
     return str(value)
+
+
+def _validate_payload(payload: Any) -> None:
+    if not isinstance(payload, dict):
+        raise ValueError("target explanation JSON must contain an object")
+
+    required_fields = [
+        "symbol",
+        "as_of_date",
+        "method",
+        "horizon_days",
+        "target_price",
+        "price_bands",
+        "features",
+        "drivers",
+        "limitations",
+    ]
+    for field in required_fields:
+        if field not in payload:
+            raise ValueError(f"target explanation JSON missing required field: {field}")
+
+    if not isinstance(payload["price_bands"], dict):
+        raise ValueError("target explanation field must be an object: price_bands")
+    if not isinstance(payload["features"], dict):
+        raise ValueError("target explanation field must be an object: features")
+    if not isinstance(payload["drivers"], list):
+        raise ValueError("target explanation field must be a list: drivers")
 
 
 def _subtitle(payload: dict[str, Any]) -> str:
