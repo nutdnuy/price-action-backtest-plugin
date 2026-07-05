@@ -313,6 +313,42 @@ def command_webull_fetch_bars(args):
     return 0
 
 
+def command_explain_target(args):
+    output_path = (
+        Path(args.output)
+        if args.output
+        else Path(args.output_root) / "target_explanation.json"
+    )
+    try:
+        import pandas as pd
+
+        from price_action_backtest.explainable_target import write_target_explanation
+
+        data = pd.read_csv(args.data_path)
+        written = write_target_explanation(
+            data,
+            output_path,
+            symbol=args.symbol,
+            lookback=args.lookback,
+            horizon_days=args.horizon_days,
+        )
+    except ImportError as exc:
+        emit_error(f"missing runtime dependency: {exc}")
+        return 1
+    except (OSError, ValueError) as exc:
+        emit_error(str(exc))
+        return 1
+
+    emit_json(
+        {
+            "ok": True,
+            "symbol": args.symbol.strip().upper(),
+            "output_path": str(written),
+        }
+    )
+    return 0
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -381,6 +417,18 @@ def build_parser():
     webull.add_argument("--output")
     webull.add_argument("--output-root", default="data/private")
     webull.set_defaults(func=command_webull_fetch_bars)
+
+    explain = subparsers.add_parser(
+        "explain-target",
+        help="Build an explainable target price JSON artifact from OHLCV CSV data.",
+    )
+    explain.add_argument("--symbol", required=True)
+    explain.add_argument("--data-path", required=True)
+    explain.add_argument("--lookback", type=int, default=120)
+    explain.add_argument("--horizon-days", type=int, default=126)
+    explain.add_argument("--output")
+    explain.add_argument("--output-root", default="outputs")
+    explain.set_defaults(func=command_explain_target)
 
     return parser
 

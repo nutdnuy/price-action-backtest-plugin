@@ -255,3 +255,33 @@ def test_run_missing_data_path_in_config_returns_json_error(tmp_path):
     payload = json.loads(result.stdout)
     assert payload["ok"] is False
     assert str(missing_data_path) in payload["error"]
+
+
+def test_explain_target_cli_writes_target_json(tmp_path):
+    output_path = tmp_path / "target_explanation.json"
+
+    result = run_cli(
+        "explain-target",
+        "--symbol",
+        "AAPL",
+        "--data-path",
+        str(SAMPLE_DATA),
+        "--lookback",
+        "20",
+        "--horizon-days",
+        "126",
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == {
+        "ok": True,
+        "symbol": "AAPL",
+        "output_path": str(output_path),
+    }
+    saved = json.loads(output_path.read_text(encoding="utf-8"))
+    assert saved["symbol"] == "AAPL"
+    assert saved["horizon_days"] == 126
+    assert saved["target_price"] == saved["price_bands"]["p50"]
