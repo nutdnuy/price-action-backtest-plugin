@@ -1,10 +1,26 @@
 import json
+import subprocess
+import sys
+from pathlib import Path
 
 import pandas as pd
 import pytest
 
 from price_action_backtest.explainable_target import write_target_explanation
 from price_action_backtest.target_reports import REQUIRED_FEATURE_FIELDS, render_target_report
+
+ROOT = Path(__file__).resolve().parents[1]
+SCRIPT = ROOT / "scripts" / "price_action_backtest.py"
+
+
+def run_cli(*args):
+    return subprocess.run(
+        [sys.executable, str(SCRIPT), *args],
+        cwd=ROOT,
+        text=True,
+        capture_output=True,
+        check=False,
+    )
 
 
 def sample_ohlcv() -> pd.DataFrame:
@@ -235,4 +251,27 @@ def test_render_target_report_creates_nested_output_path(tmp_path):
     report_path = render_target_report(payload_path, output_path)
 
     assert report_path == output_path
+    assert output_path.exists()
+
+
+def test_render_target_report_cli_writes_html(tmp_path):
+    payload_path = tmp_path / "target_explanation.json"
+    output_path = tmp_path / "target_report.html"
+    payload_path.write_text(json.dumps(sample_payload()), encoding="utf-8")
+
+    result = run_cli(
+        "render-target-report",
+        "--payload-path",
+        str(payload_path),
+        "--output",
+        str(output_path),
+    )
+
+    assert result.returncode == 0, result.stderr
+    payload = json.loads(result.stdout)
+    assert payload == {
+        "ok": True,
+        "payload_path": str(payload_path),
+        "report_path": str(output_path),
+    }
     assert output_path.exists()

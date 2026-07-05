@@ -349,6 +349,33 @@ def command_explain_target(args):
     return 0
 
 
+def command_render_target_report(args):
+    output_path = (
+        Path(args.output)
+        if args.output
+        else Path(args.output_root) / "target_report.html"
+    )
+    try:
+        from price_action_backtest.target_reports import render_target_report
+
+        report_path = render_target_report(args.payload_path, output_path)
+    except ImportError as exc:
+        emit_error(f"missing runtime dependency: {exc}")
+        return 1
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as exc:
+        emit_error(str(exc))
+        return 1
+
+    emit_json(
+        {
+            "ok": True,
+            "payload_path": args.payload_path,
+            "report_path": str(report_path),
+        }
+    )
+    return 0
+
+
 def build_parser():
     parser = JsonArgumentParser(
         description="Price action backtest helper CLI."
@@ -429,6 +456,15 @@ def build_parser():
     explain.add_argument("--output")
     explain.add_argument("--output-root", default="outputs")
     explain.set_defaults(func=command_explain_target)
+
+    target_report = subparsers.add_parser(
+        "render-target-report",
+        help="Render a target_explanation.json artifact as a standalone HTML report.",
+    )
+    target_report.add_argument("--payload-path", required=True)
+    target_report.add_argument("--output")
+    target_report.add_argument("--output-root", default="outputs")
+    target_report.set_defaults(func=command_render_target_report)
 
     return parser
 
