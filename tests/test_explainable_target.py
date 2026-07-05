@@ -1,9 +1,14 @@
+import json
 import math
 
 import pandas as pd
 import pytest
 
-from price_action_backtest.explainable_target import compute_price_structure_features
+from price_action_backtest.explainable_target import (
+    build_explainable_target,
+    compute_price_structure_features,
+    write_target_explanation,
+)
 
 
 def sample_ohlcv() -> pd.DataFrame:
@@ -59,3 +64,43 @@ def test_compute_price_structure_features_does_not_mutate_input_columns():
     compute_price_structure_features(data, lookback=4)
 
     assert list(data.columns) == original_columns
+
+
+def test_build_explainable_target_returns_ordered_probability_bands():
+    payload = build_explainable_target(
+        sample_ohlcv(), symbol="AAPL", lookback=4, horizon_days=126
+    )
+
+    assert payload["symbol"] == "AAPL"
+    assert payload["as_of_date"] == "2026-01-07"
+    assert payload["method"] == "price_structure_heuristic_v1"
+    price_bands = payload["price_bands"]
+    assert (
+        price_bands["p10"]
+        < price_bands["p25"]
+        < price_bands["p50"]
+        < price_bands["p75"]
+        < price_bands["p90"]
+    )
+    assert payload["target_price"] == price_bands["p50"]
+    assert [driver["name"] for driver in payload["drivers"]] == [
+        "trend_return",
+        "channel_position",
+        "drawdown_from_high",
+    ]
+    assert "not a forecast guarantee" in payload["limitations"]
+
+
+def test_write_target_explanation_creates_json_file(tmp_path):
+    output_path = tmp_path / "target.json"
+
+    returned_path = write_target_explanation(
+        sample_ohlcv(), output_path, symbol="AAPL", lookback=4, horizon_days=126
+    )
+
+    assert returned_path == output_path
+    assert output_path.exists()
+    payload = json.loads(output_path.read_text(encoding="utf-8"))
+    assert payload["symbol"] == "AAPL"
+    assert payload["input"]["lookback_rows"] == 4
+    assert payload["target_price"] == payload["price_bands"]["p50"]
