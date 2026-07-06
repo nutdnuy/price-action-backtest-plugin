@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import logging
 import os
+import re
 import shlex
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +18,14 @@ WEBULL_ENDPOINTS = {
 }
 WEBULL_CATEGORIES = {"US_STOCK", "US_ETF"}
 WEBULL_TIMESPANS = {"M1", "M5", "M15", "M30", "M60", "M120", "M240", "D", "W", "M", "Y"}
+SENSITIVE_ERROR_PATTERNS = (
+    (re.compile(r'("x-app-key"\s*:\s*")[^"]+'), r"\1<redacted>"),
+    (re.compile(r'("x-signature"\s*:\s*")[^"]+'), r"\1<redacted>"),
+    (re.compile(r'("x-signature-nonce"\s*:\s*")[^"]+'), r"\1<redacted>"),
+    (re.compile(r'("x-timestamp"\s*:\s*")[^"]+'), r"\1<redacted>"),
+    (re.compile(r"(app[_ -]?key[=: ]+)[A-Za-z0-9._/-]+", re.IGNORECASE), r"\1<redacted>"),
+    (re.compile(r"(app[_ -]?secret[=: ]+)[A-Za-z0-9._/-]+", re.IGNORECASE), r"\1<redacted>"),
+)
 
 
 class WebullAPIError(RuntimeError):
@@ -28,6 +38,52 @@ def redact_secret(value: str | None) -> str:
     if len(value) <= 5:
         return "*****"
     return f"{value[:4]}...{value[-4:]}"
+
+
+def redact_webull_error(message: str) -> str:
+    redacted = message
+    for pattern, replacement in SENSITIVE_ERROR_PATTERNS:
+        redacted = pattern.sub(replacement, redacted)
+    return redacted
+
+
+def format_webull_error(message: str) -> str:
+    redacted = redact_webull_error(message)
+    normalized = redacted.upper()
+    if "UNAUTHORIZED" in normalized:
+        return (
+            f"{redacted}. Check that WEBULL_ENV matches the app key environment "
+            "and that the key is approved by Webull OpenAPI."
+        )
+    if "ONLY AAPL IS ALLOWED" in normalized:
+        return (
+            f"{redacted}. The current Webull UAT test credential only permits AAPL; "
+            "use approved production credentials with US market-data permission for other symbols."
+        )
+    return redacted
+
+
+def silence_webull_sdk_logging(api_client: Any | None = None) -> None:
+    silent_logger = logging.getLogger("price_action_backtest.webull.silent")
+    silent_logger.handlers.clear()
+    silent_logger.addHandler(logging.NullHandler())
+    silent_logger.setLevel(logging.CRITICAL + 1)
+    silent_logger.propagate = False
+
+    for logger_name in ("webull.core", "webull.data"):
+        logger = logging.getLogger(logger_name)
+        logger.handlers.clear()
+        logger.addHandler(logging.NullHandler())
+        logger.setLevel(logging.CRITICAL + 1)
+        logger.propagate = False
+
+    if api_client is not None:
+        if hasattr(api_client, "set_logger"):
+            api_client.set_logger(silent_logger)
+        # Prevent DataClient from installing its default stdout/file loggers, which
+        # include signed request headers when Webull returns an authentication error.
+        api_client._stream_logger_set = True
+        api_client._file_logger_set = True
 
 
 @dataclass(frozen=True)
@@ -105,6 +161,7 @@ def build_webull_data_client(
     api_client_cls: type[Any] | None = None,
     data_client_cls: type[Any] | None = None,
 ) -> Any:
+    silence_webull_sdk_logging()
     if api_client_cls is None:
         from webull.core.client import ApiClient
 
@@ -118,6 +175,7 @@ def build_webull_data_client(
     api_client.add_endpoint(settings.region, settings.endpoint)
     if settings.token_dir is not None:
         api_client.set_token_dir(str(settings.token_dir))
+    silence_webull_sdk_logging(api_client)
     return data_client_cls(api_client)
 
 

@@ -268,6 +268,7 @@ def command_webull_fetch_bars(args):
         from price_action_backtest.webull import (
             build_webull_data_client,
             fetch_stock_bars,
+            format_webull_error,
             load_webull_settings,
             write_webull_bars_csv,
         )
@@ -294,10 +295,10 @@ def command_webull_fetch_bars(args):
         )
         return 1
     except (OSError, RuntimeError, TypeError, ValueError) as exc:
-        emit_error(str(exc))
+        emit_error(format_webull_error(str(exc)))
         return 1
     except Exception as exc:
-        emit_error(f"Webull SDK error: {exc}")
+        emit_error(format_webull_error(f"Webull SDK error: {exc}"))
         return 1
 
     emit_json(

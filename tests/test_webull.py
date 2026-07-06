@@ -11,7 +11,10 @@ from price_action_backtest.webull import (
     WebullSettings,
     build_webull_data_client,
     fetch_stock_bars,
+    format_webull_error,
     load_webull_settings,
+    redact_webull_error,
+    silence_webull_sdk_logging,
     webull_bars_to_ohlcv,
     write_webull_bars_csv,
 )
@@ -130,6 +133,45 @@ def test_build_webull_data_client_configures_endpoint_and_token_dir(tmp_path):
 
     assert client.api_client.endpoints == [("us", "us-openapi-alb.uat.webullbroker.com")]
     assert client.api_client.token_dir == str(tmp_path / "tokens")
+    assert client.api_client._stream_logger_set is True
+    assert client.api_client._file_logger_set is True
+
+
+def test_silence_webull_sdk_logging_marks_client_logger_configured():
+    api_client = FakeApiClient("visible_key", "visible_secret", "us")
+
+    silence_webull_sdk_logging(api_client)
+
+    assert api_client._stream_logger_set is True
+    assert api_client._file_logger_set is True
+
+
+def test_redact_webull_error_removes_sensitive_headers():
+    message = (
+        'Request: {"x-app-key": "abc123", "x-signature": "signed-value", '
+        '"x-signature-nonce": "nonce-value", "x-timestamp": "2026-07-06T01:00:00Z"} '
+        "app secret=secret_abcdef app key=key_123456"
+    )
+
+    redacted = redact_webull_error(message)
+
+    assert "abc123" not in redacted
+    assert "signed-value" not in redacted
+    assert "nonce-value" not in redacted
+    assert "2026-07-06T01:00:00Z" not in redacted
+    assert "secret_abcdef" not in redacted
+    assert "key_123456" not in redacted
+    assert redacted.count("<redacted>") == 6
+
+
+def test_format_webull_error_adds_actionable_credential_hints():
+    unauthorized = format_webull_error("HTTP Status: 401, Code: UNAUTHORIZED")
+    invalid_symbol = format_webull_error("HTTP Status: 403, Msg: Only AAPL is allowed")
+
+    assert "WEBULL_ENV" in unauthorized
+    assert "approved by Webull OpenAPI" in unauthorized
+    assert "only permits AAPL" in invalid_symbol
+    assert "production credentials" in invalid_symbol
 
 
 def test_fetch_stock_bars_normalizes_args_and_passes_query_options():

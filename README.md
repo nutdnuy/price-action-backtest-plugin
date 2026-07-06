@@ -106,6 +106,9 @@ Webull notes:
 
 - The command uses the official Webull SDK and the Market Data API historical
   bars endpoint.
+- Shared UAT/test credentials are suitable for connector smoke tests, but may
+  restrict historical bars to AAPL. ETFs such as UST require approved production
+  credentials and US market-data permission.
 - US stock/ETF historical market data may require an active OpenAPI market data
   subscription.
 - Daily bars and above are forward-adjusted according to Webull's API

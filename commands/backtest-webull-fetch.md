@@ -52,6 +52,9 @@ Notes:
 
 - The command uses the official Webull Python SDK.
 - It is read-only and does not call trading/order APIs.
+- Shared UAT/test credentials are useful for smoke tests, but may allow only
+  AAPL. Use approved production credentials with US market-data permission for
+  ETFs such as UST.
 - US stock/ETF historical market data may require an active OpenAPI market data
   subscription in Webull.
 - Daily bars and above are forward-adjusted per Webull's API documentation;
